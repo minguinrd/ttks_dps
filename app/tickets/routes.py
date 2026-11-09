@@ -1,8 +1,11 @@
+from datetime import datetime, timezone
+
 from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
-from app.models import Comment, InvalidTransition, Role, Ticket, TicketStatus, User
+from app.models import Comment, Department, InvalidTransition, Role, Ticket, TicketStatus, User
+from app.permissions import role_required
 from app.tickets import tickets_bp
 from app.tickets.forms import AssignForm, CommentForm, ResolveForm, TicketEditForm, TicketForm
 
@@ -18,6 +21,36 @@ def mine():
         .order_by(Ticket.created_at.desc())
     ).all()
     return render_template("tickets/mine.html", tickets=tickets)
+
+
+@tickets_bp.route("/queue")
+@login_required
+@role_required("agent", "admin")
+def queue():
+    query = db.select(Ticket).order_by(Ticket.created_at.desc())
+    status = request.args.get("status", "")
+    if status:
+        query = query.where(Ticket.status == status)
+    category = request.args.get("category", "")
+    if category:
+        query = query.where(Ticket.category == category)
+    priority = request.args.get("priority", "")
+    if priority:
+        query = query.where(Ticket.priority == priority)
+    department_id = request.args.get("department_id", type=int)
+    if department_id:
+        query = query.where(Ticket.department_id == department_id)
+    requester_id = request.args.get("requester_id", type=int)
+    if requester_id:
+        query = query.where(Ticket.requester_id == requester_id)
+    return render_template(
+        "tickets/queue.html",
+        tickets=db.session.scalars(query).all(),
+        # SQLite hands back naive UTC datetimes; keep ``now`` naive so the age column can subtract.
+        now=datetime.now(timezone.utc).replace(tzinfo=None),
+        departments=db.session.scalars(db.select(Department).order_by(Department.name)).all(),
+        users=db.session.scalars(db.select(User).order_by(User.username)).all(),
+    )
 
 
 @tickets_bp.route("/new", methods=["GET", "POST"])
