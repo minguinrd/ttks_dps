@@ -1,0 +1,13 @@
+{% extends "base.html" %} {% block title %}Registration pending{% endblock %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h4">Registration received</h1>
+        <p class="mb-4">Your account is awaiting admin approval.</p>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">Back to sign in</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
