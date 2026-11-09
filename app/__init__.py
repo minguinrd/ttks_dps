@@ -2,6 +2,7 @@ import os
 
 from flask import Flask
 
+from app import models  # noqa: F401  # register ORM mappers so Flask-Migrate can autogenerate
 from app.config import Config
 from app.extensions import csrf, db, login_manager, migrate
 
