@@ -21,8 +21,88 @@ priority_badge %} {% block title %}Ticket #{{ ticket.id }}{% endblock %} {% bloc
   </div>
 </div>
 
-{# Action buttons (claim, resolve, close, reopen) are filled in by the ticket-actions task. #}
-{% block actions %}{% endblock %}
+{# Action buttons rendered from status + the viewer's role and stake in the ticket. #}
+{% set is_staff = current_user.role in ("agent", "admin") %}
+{% set is_requester = current_user.id == ticket.requester_id %}
+{% set is_assignee = current_user.id == ticket.assignee_id %}
+{% set can_claim = ticket.status == "open" and is_staff %}
+{% set can_release = ticket.status == "assigned" and (is_assignee or current_user.role == "admin")
+%}
+{% set can_assign = ticket.status in ("open", "assigned") and current_user.role == "admin" %}
+{% set can_resolve = ticket.status == "assigned" and (is_assignee or current_user.role == "admin") %}
+{% set can_reopen = (ticket.status == "resolved" and (is_requester or is_staff)) or (ticket.status ==
+"closed" and current_user.role == "admin") %}
+{% set can_close = ticket.status in ("open", "assigned", "resolved") and (is_requester or is_assignee
+or is_staff) %}
+{% if can_claim or can_release or can_assign or can_resolve or can_reopen or can_close %}
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2 align-items-start">
+      {% if can_claim %}
+      <form method="post" action="{{ url_for('tickets.claim', ticket_id=ticket.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn btn-primary">Claim</button>
+      </form>
+      {% endif %} {% if can_release %}
+      <form method="post" action="{{ url_for('tickets.release', ticket_id=ticket.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn btn-outline-secondary">Release</button>
+      </form>
+      {% endif %} {% if can_assign %}
+      <form
+        method="post"
+        action="{{ url_for('tickets.assign', ticket_id=ticket.id) }}"
+        class="d-flex gap-2"
+      >
+        {{ assign_form.hidden_tag() }} {{ assign_form.agent_id(class_="form-select") }}
+        <button type="submit" class="btn btn-outline-primary">Assign</button>
+      </form>
+      {% endif %} {% if can_resolve %}
+      <form
+        method="post"
+        action="{{ url_for('tickets.resolve', ticket_id=ticket.id) }}"
+        class="w-100"
+        novalidate
+      >
+        {{ resolve_form.hidden_tag() }}
+        <div class="mb-2">
+          {{ resolve_form.resolution_note.label(class_="form-label") }} {{
+          resolve_form.resolution_note(class_="form-control" + (" is-invalid" if
+          resolve_form.resolution_note.errors else ""), rows="2", placeholder="What fixed it?") }}
+          {% for error in resolve_form.resolution_note.errors %}
+          <div class="invalid-feedback d-block">{{ error }}</div>
+          {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-success">Resolve</button>
+      </form>
+      {% endif %} {% if can_reopen %}
+      <form
+        method="post"
+        action="{{ url_for('tickets.reopen', ticket_id=ticket.id) }}"
+        class="w-100"
+        data-confirm="Reopen this ticket? It goes back to the assigned state."
+      >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="mb-2">
+          <label class="form-label" for="reopen-comment">Comment (optional)</label>
+          <textarea class="form-control" id="reopen-comment" name="comment" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn btn-warning">Reopen</button>
+      </form>
+      {% endif %} {% if can_close %}
+      <form
+        method="post"
+        action="{{ url_for('tickets.close', ticket_id=ticket.id) }}"
+        data-confirm="Close this ticket? It will accept no further comments or edits."
+      >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn btn-outline-danger">Close</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <h2 class="h5">Thread</h2>
 {% for comment in comments %} {% if not comment.is_internal or current_user.role != "user" %}

@@ -25,4 +25,13 @@ class CommentForm(FlaskForm):
     is_internal = BooleanField("Internal note (agents and admins only)")
 
 
+class ResolveForm(FlaskForm):
+    resolution_note = TextAreaField("Resolution note", validators=[DataRequired()])
+
+
+class AssignForm(FlaskForm):
+    # Choices are filled per request with ``(0, "Select an agent…")`` plus the agents.
+    agent_id = SelectField("Assign to", coerce=int, validators=[DataRequired()])
+
+
 TicketEditForm = TicketForm

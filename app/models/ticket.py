@@ -31,6 +31,11 @@ class InvalidTransition(Exception):
     """Raised when a ticket status transition is not allowed."""
 
 
+def _display_name(user: User) -> str:
+    """Name shown in system comments (same fallback the templates use)."""
+    return user.full_name or user.username
+
+
 class Comment(db.Model):
     __tablename__ = "comments"
 
@@ -77,3 +82,54 @@ class Ticket(db.Model):
         comment = Comment(ticket=self, author=actor, body=text)
         db.session.add(comment)
         return comment
+
+    def _require_status(self, *allowed: TicketStatus) -> None:
+        """Raise ``InvalidTransition`` unless the current status is one of ``allowed``."""
+        if self.status not in allowed:
+            raise InvalidTransition(
+                f"Cannot perform this action while the ticket is {self.status}."
+            )
+
+    def claim(self, agent: User) -> None:
+        """``open → assigned``: ``agent`` takes the ticket from the queue."""
+        self._require_status(TicketStatus.open)
+        self.status = TicketStatus.assigned
+        self.assignee = agent
+        self.add_system_comment(agent, f"Claimed by {_display_name(agent)}.")
+
+    def release(self, actor: User) -> None:
+        """``assigned → open``: unclaim the ticket and return it to the queue."""
+        self._require_status(TicketStatus.assigned)
+        self.status = TicketStatus.open
+        self.assignee = None
+        self.add_system_comment(actor, f"Released by {_display_name(actor)}.")
+
+    def assign_to(self, agent: User, actor: User) -> None:
+        """Set the assignee (``open`` transitions to ``assigned``; reassignment keeps it)."""
+        self._require_status(TicketStatus.open, TicketStatus.assigned)
+        self.status = TicketStatus.assigned
+        self.assignee = agent
+        self.add_system_comment(
+            actor, f"Assigned to {_display_name(agent)} by {_display_name(actor)}."
+        )
+
+    def resolve(self, actor: User, note: str) -> None:
+        """``assigned → resolved``: record the resolution note and timestamp."""
+        self._require_status(TicketStatus.assigned)
+        self.status = TicketStatus.resolved
+        self.resolution_note = note
+        self.resolved_at = datetime.now(timezone.utc)
+        self.add_system_comment(actor, f"Resolved by {_display_name(actor)}.")
+
+    def reopen(self, actor: User) -> None:
+        """``resolved → assigned`` or ``closed → assigned`` (admin-only from closed in routes)."""
+        self._require_status(TicketStatus.resolved, TicketStatus.closed)
+        self.status = TicketStatus.assigned
+        self.add_system_comment(actor, f"Reopened by {_display_name(actor)}.")
+
+    def close(self, actor: User) -> None:
+        """``open|assigned|resolved → closed``: freeze the ticket and stamp the close time."""
+        self._require_status(TicketStatus.open, TicketStatus.assigned, TicketStatus.resolved)
+        self.status = TicketStatus.closed
+        self.closed_at = datetime.now(timezone.utc)
+        self.add_system_comment(actor, f"Closed by {_display_name(actor)}.")

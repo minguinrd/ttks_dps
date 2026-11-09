@@ -1,10 +1,12 @@
-from flask import abort, flash, redirect, render_template, url_for
+from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
-from app.models import Comment, Role, Ticket, TicketStatus
+from app.models import Comment, InvalidTransition, Role, Ticket, TicketStatus, User
 from app.tickets import tickets_bp
-from app.tickets.forms import CommentForm, TicketEditForm, TicketForm
+from app.tickets.forms import AssignForm, CommentForm, ResolveForm, TicketEditForm, TicketForm
+
+INVALID_TRANSITION_MESSAGE = "This action is not allowed for the current ticket status."
 
 
 @tickets_bp.route("/mine")
@@ -42,21 +44,7 @@ def new():
 @tickets_bp.route("/<int:ticket_id>")
 @login_required
 def detail(ticket_id):
-    ticket = _visible_ticket_or_404(ticket_id)
-    # Internal notes are stripped server-side for regular users, never just hidden.
-    comments = [
-        comment
-        for comment in ticket.comments
-        if current_user.role != Role.user or not comment.is_internal
-    ]
-    return render_template(
-        "tickets/detail.html",
-        ticket=ticket,
-        comments=comments,
-        comment_form=CommentForm(),
-        edit_form=TicketEditForm(obj=ticket),
-        can_edit=_can_edit(ticket),
-    )
+    return _render_detail(_visible_ticket_or_404(ticket_id))
 
 
 @tickets_bp.route("/<int:ticket_id>/comments", methods=["POST"])
@@ -103,6 +91,114 @@ def edit(ticket_id):
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
 
 
+@tickets_bp.route("/<int:ticket_id>/claim", methods=["POST"])
+@login_required
+def claim(ticket_id):
+    ticket = _visible_ticket_or_404(ticket_id)
+    if current_user.role not in (Role.agent, Role.admin):
+        abort(403)
+    try:
+        ticket.claim(current_user)
+    except InvalidTransition:
+        flash(INVALID_TRANSITION_MESSAGE, "danger")
+        return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+    db.session.commit()
+    flash("Ticket claimed.", "success")
+    return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+
+
+@tickets_bp.route("/<int:ticket_id>/release", methods=["POST"])
+@login_required
+def release(ticket_id):
+    ticket = _visible_ticket_or_404(ticket_id)
+    if current_user.id != ticket.assignee_id and current_user.role != Role.admin:
+        abort(403)
+    try:
+        ticket.release(current_user)
+    except InvalidTransition:
+        flash(INVALID_TRANSITION_MESSAGE, "danger")
+        return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+    db.session.commit()
+    flash("Ticket released.", "success")
+    return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+
+
+@tickets_bp.route("/<int:ticket_id>/assign", methods=["POST"])
+@login_required
+def assign(ticket_id):
+    ticket = _visible_ticket_or_404(ticket_id)
+    if current_user.role != Role.admin:
+        abort(403)
+    form = _assign_form()
+    if not form.validate_on_submit():
+        flash("Select a valid agent.", "danger")
+        return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+    agent = db.session.get(User, form.agent_id.data)
+    try:
+        ticket.assign_to(agent, current_user)
+    except InvalidTransition:
+        flash(INVALID_TRANSITION_MESSAGE, "danger")
+        return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+    db.session.commit()
+    flash("Ticket assigned.", "success")
+    return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+
+
+@tickets_bp.route("/<int:ticket_id>/resolve", methods=["POST"])
+@login_required
+def resolve(ticket_id):
+    ticket = _visible_ticket_or_404(ticket_id)
+    if current_user.id != ticket.assignee_id and current_user.role != Role.admin:
+        abort(403)
+    form = ResolveForm()
+    if not form.validate_on_submit():
+        return _render_detail(ticket, resolve_form=form)
+    try:
+        ticket.resolve(current_user, form.resolution_note.data)
+    except InvalidTransition:
+        flash(INVALID_TRANSITION_MESSAGE, "danger")
+        return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+    db.session.commit()
+    flash("Ticket resolved.", "success")
+    return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+
+
+@tickets_bp.route("/<int:ticket_id>/reopen", methods=["POST"])
+@login_required
+def reopen(ticket_id):
+    ticket = _visible_ticket_or_404(ticket_id)
+    if not _can_reopen(ticket):
+        abort(403)
+    try:
+        ticket.reopen(current_user)
+    except InvalidTransition:
+        flash(INVALID_TRANSITION_MESSAGE, "danger")
+        return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+    body = request.form.get("comment", "").strip()
+    if body:
+        db.session.add(Comment(ticket_id=ticket.id, author_id=current_user.id, body=body))
+    db.session.commit()
+    flash("Ticket reopened.", "success")
+    return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+
+
+@tickets_bp.route("/<int:ticket_id>/close", methods=["POST"])
+@login_required
+def close(ticket_id):
+    ticket = _visible_ticket_or_404(ticket_id)
+    is_participant = current_user.id in (ticket.requester_id, ticket.assignee_id)
+    if not is_participant and current_user.role not in (Role.agent, Role.admin):
+        abort(403)
+    try:
+        ticket.close(current_user)
+    except InvalidTransition:
+        flash(INVALID_TRANSITION_MESSAGE, "danger")
+        return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+    db.session.commit()
+    flash("Ticket closed.", "success")
+    return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+
+
 def _visible_ticket_or_404(ticket_id: int) -> Ticket:
     """Fetch a ticket; regular users only see tickets they request or are assigned (else 404)."""
     ticket = db.session.get(Ticket, ticket_id)
@@ -123,3 +219,42 @@ def _can_edit(ticket: Ticket) -> bool:
     if current_user.role != Role.user:
         return True
     return ticket.requester_id == current_user.id and ticket.status == TicketStatus.open
+
+
+def _can_reopen(ticket: Ticket) -> bool:
+    """Admin reopens closed tickets; resolved ones may also be reopened by requester/agent."""
+    if ticket.status == TicketStatus.closed:
+        return current_user.role == Role.admin
+    return current_user.id == ticket.requester_id or current_user.role in (Role.agent, Role.admin)
+
+
+def _assign_form() -> AssignForm:
+    """Assign form with choices seeded with the agent/admin users."""
+    form = AssignForm()
+    agents = db.session.scalars(
+        db.select(User).where(User.role.in_((Role.agent, Role.admin))).order_by(User.username)
+    ).all()
+    form.agent_id.choices = [(0, "Select an agent…")] + [
+        (agent.id, agent.full_name or agent.username) for agent in agents
+    ]
+    return form
+
+
+def _render_detail(ticket: Ticket, resolve_form: ResolveForm | None = None):
+    """Render the detail page; ``resolve_form`` carries errors when re-rendered after a failure."""
+    # Internal notes are stripped server-side for regular users, never just hidden.
+    comments = [
+        comment
+        for comment in ticket.comments
+        if current_user.role != Role.user or not comment.is_internal
+    ]
+    return render_template(
+        "tickets/detail.html",
+        ticket=ticket,
+        comments=comments,
+        comment_form=CommentForm(),
+        edit_form=TicketEditForm(obj=ticket),
+        can_edit=_can_edit(ticket),
+        resolve_form=resolve_form or ResolveForm(),
+        assign_form=_assign_form(),
+    )
