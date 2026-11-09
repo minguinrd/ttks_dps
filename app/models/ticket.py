@@ -105,8 +105,10 @@ class Ticket(db.Model):
         self.add_system_comment(actor, f"Released by {_display_name(actor)}.")
 
     def assign_to(self, agent: User, actor: User) -> None:
-        """Set the assignee (``open`` transitions to ``assigned``; reassignment keeps it)."""
+        """Set the assignee (``open → assigned``; from ``assigned`` only to a different agent)."""
         self._require_status(TicketStatus.open, TicketStatus.assigned)
+        if self.status == TicketStatus.assigned and self.assignee_id == agent.id:
+            raise InvalidTransition("Ticket is already assigned to this agent.")
         self.status = TicketStatus.assigned
         self.assignee = agent
         self.add_system_comment(

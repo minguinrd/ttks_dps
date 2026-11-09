@@ -243,3 +243,46 @@ def test_resolve_unassigned_open_rejected(app, client, user_factory, login, tick
         row = db.session.get(Ticket, ticket.id)
         assert row.status == "open"
         assert row.resolution_note is None
+
+
+def test_assign_same_agent_rejected(app, client, user_factory, login, ticket_factory):
+    owner = user_factory(username="same-assign-owner")
+    agent = user_factory(username="same-assign-target", role="agent")
+    admin = user_factory(username="same-assign-admin", role="admin")
+    ticket = ticket_factory(owner, status="assigned", assignee=agent)
+    updated_before = ticket.updated_at
+    login(client, admin)
+
+    resp = client.post(
+        f"/tickets/{ticket.id}/assign", data={"agent_id": agent.id}, follow_redirects=True
+    )
+
+    assert resp.status_code == 200
+    assert INVALID_TRANSITION_MESSAGE in resp.get_data(as_text=True)
+    with app.app_context():
+        row = db.session.get(Ticket, ticket.id)
+        assert row.status == "assigned"
+        assert row.assignee_id == agent.id
+        assert row.updated_at == updated_before
+        assert db.session.scalars(db.select(Comment).filter_by(ticket_id=ticket.id)).all() == []
+
+
+def test_reassign_to_different_agent(app, client, user_factory, login, ticket_factory):
+    owner = user_factory(username="reassign-owner")
+    first = user_factory(username="reassign-first", role="agent", full_name="Ivy First")
+    second = user_factory(username="reassign-second", role="agent", full_name="Jan Second")
+    admin = user_factory(username="reassign-admin", role="admin", full_name="Rex Admin")
+    ticket = ticket_factory(owner, status="assigned", assignee=first)
+    login(client, admin)
+
+    resp = client.post(f"/tickets/{ticket.id}/assign", data={"agent_id": second.id})
+
+    assert resp.status_code == 302
+    with app.app_context():
+        row = db.session.get(Ticket, ticket.id)
+        assert row.status == "assigned"
+        assert row.assignee_id == second.id
+        comments = db.session.scalars(
+            db.select(Comment).filter_by(ticket_id=ticket.id).order_by(Comment.id)
+        ).all()
+        assert [comment.body for comment in comments] == ["Assigned to Jan Second by Rex Admin."]
