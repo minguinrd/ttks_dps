@@ -1,6 +1,11 @@
+import re
 from io import BytesIO
 from pathlib import Path
+from types import SimpleNamespace
 
+import pytest
+
+from app import create_app
 from app.extensions import db
 from app.models import User
 
@@ -167,3 +172,60 @@ def test_avatar_404_when_missing(client, user_factory, login):
     resp = client.get(f"/avatars/{user.id}")
 
     assert resp.status_code == 404
+
+
+def _csrf_token(html):
+    match = re.search(r'name="csrf_token"[^>]*value="([^"]+)"', html)
+    assert match is not None, "csrf_token field not found"
+    return match.group(1)
+
+
+@pytest.fixture()
+def csrf_client(tmp_path):
+    """Logged-in client on an app with CSRF ENABLED (the production setting)."""
+    avatars = tmp_path / "avatars"
+    avatars.mkdir()
+    app = create_app(
+        {
+            "TESTING": True,
+            "SECRET_KEY": "test",
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path}/test.db",
+            "WTF_CSRF_ENABLED": True,
+            "AVATAR_DIR": str(avatars),
+        }
+    )
+    with app.app_context():
+        db.create_all()
+        user = User(username="csrfy", status="active")
+        user.set_password("pass12345")
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.id
+    client = app.test_client()
+    token = _csrf_token(client.get("/auth/login").get_data(as_text=True))
+    resp = client.post(
+        "/auth/login",
+        data={"username": "csrfy", "password": "pass12345", "csrf_token": token},
+    )
+    assert resp.status_code == 302
+    return SimpleNamespace(app=app, client=client, user_id=user_id, avatars=avatars)
+
+
+def test_avatar_oversize_rejected_with_csrf_enabled(csrf_client):
+    # Prove CSRF protection is genuinely enforced on this app (no token -> 400).
+    resp = csrf_client.client.post("/profile", data={"full_name": "X", "email": "x@example.com"})
+    assert resp.status_code == 400
+
+    token = _csrf_token(csrf_client.client.get("/profile").get_data(as_text=True))
+    big = b"\x89PNG\r\n\x1a\n" + b"x" * (3 * 1024 * 1024)
+    resp = csrf_client.client.post(
+        "/profile/avatar",
+        data={"csrf_token": token, "avatar": (BytesIO(big), "big.png", "image/png")},
+        content_type="multipart/form-data",
+    )
+
+    assert resp.status_code == 200
+    assert "File too large (max 2 MB)." in resp.get_data(as_text=True)
+    assert list(csrf_client.avatars.iterdir()) == []
+    with csrf_client.app.app_context():
+        assert db.session.get(User, csrf_client.user_id).avatar_path is None
