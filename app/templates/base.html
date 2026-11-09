@@ -36,6 +36,18 @@
             {% endif %}
           </ul>
           <ul class="navbar-nav">
+            <li class="nav-item">
+              <a
+                class="nav-link"
+                href="{{ url_for('main.notifications') }}"
+                title="Notifications"
+                aria-label="Notifications"
+              >
+                🔔 {% set unread = unread_count(current_user) %} {% if unread > 0 %}
+                <span class="badge bg-danger" id="unread-badge">{{ unread }}</span>
+                {% endif %}
+              </a>
+            </li>
             <li class="nav-item dropdown">
               <a
                 class="nav-link dropdown-toggle"

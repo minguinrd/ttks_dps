@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.models import Comment, Department, InvalidTransition, Role, Ticket, TicketStatus, User
+from app.notifications import notify
 from app.permissions import role_required
 from app.tickets import tickets_bp
 from app.tickets.forms import AssignForm, CommentForm, ResolveForm, TicketEditForm, TicketForm
@@ -98,6 +99,15 @@ def comment(ticket_id):
                 is_internal=is_internal,
             )
         )
+        # Internal notes are for agents only: they never notify anyone.
+        if not is_internal:
+            notify(
+                _comment_recipients(ticket),
+                f"New comment on ticket #{ticket.id}.",
+                url_for("tickets.detail", ticket_id=ticket.id),
+                ticket=ticket,
+                exclude_id=current_user.id,
+            )
         db.session.commit()
         flash("Comment posted.", "success")
     else:
@@ -135,6 +145,12 @@ def claim(ticket_id):
     except InvalidTransition:
         flash(INVALID_TRANSITION_MESSAGE, "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+    notify(
+        [ticket.assignee.id],
+        f"Ticket #{ticket.id} has been assigned to you.",
+        url_for("tickets.detail", ticket_id=ticket.id),
+        ticket=ticket,
+    )
     db.session.commit()
     flash("Ticket claimed.", "success")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
@@ -172,6 +188,12 @@ def assign(ticket_id):
     except InvalidTransition:
         flash(INVALID_TRANSITION_MESSAGE, "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+    notify(
+        [agent.id],
+        f"Ticket #{ticket.id} has been assigned to you.",
+        url_for("tickets.detail", ticket_id=ticket.id),
+        ticket=ticket,
+    )
     db.session.commit()
     flash("Ticket assigned.", "success")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
@@ -191,6 +213,12 @@ def resolve(ticket_id):
     except InvalidTransition:
         flash(INVALID_TRANSITION_MESSAGE, "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+    notify(
+        [ticket.requester_id],
+        f"Ticket #{ticket.id} has been resolved.",
+        url_for("tickets.detail", ticket_id=ticket.id),
+        ticket=ticket,
+    )
     db.session.commit()
     flash("Ticket resolved.", "success")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
@@ -210,6 +238,18 @@ def reopen(ticket_id):
     body = request.form.get("comment", "").strip()
     if body:
         db.session.add(Comment(ticket_id=ticket.id, author_id=current_user.id, body=body))
+    # Reopening notifies the counterpart: the requester when an agent/admin
+    # acts, otherwise the assignee (the requester is the actor in that case).
+    if current_user.role in (Role.agent, Role.admin) and ticket.requester_id != current_user.id:
+        reopen_recipient_ids = [ticket.requester_id]
+    else:
+        reopen_recipient_ids = [ticket.assignee_id] if ticket.assignee_id else []
+    notify(
+        reopen_recipient_ids,
+        f"Ticket #{ticket.id} has been reopened.",
+        url_for("tickets.detail", ticket_id=ticket.id),
+        ticket=ticket,
+    )
     db.session.commit()
     flash("Ticket reopened.", "success")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
@@ -227,9 +267,20 @@ def close(ticket_id):
     except InvalidTransition:
         flash(INVALID_TRANSITION_MESSAGE, "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+    notify(
+        [ticket.requester_id],
+        f"Ticket #{ticket.id} has been closed.",
+        url_for("tickets.detail", ticket_id=ticket.id),
+        ticket=ticket,
+    )
     db.session.commit()
     flash("Ticket closed.", "success")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
+
+
+def _comment_recipients(ticket: Ticket) -> list[int]:
+    """Requester and assignee ids (whichever exist) for a public comment."""
+    return sorted({user_id for user_id in (ticket.requester_id, ticket.assignee_id) if user_id})
 
 
 def _visible_ticket_or_404(ticket_id: int) -> Ticket:

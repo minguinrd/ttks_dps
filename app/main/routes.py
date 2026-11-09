@@ -7,7 +7,7 @@ from flask_login import current_user, login_required
 from app.extensions import db
 from app.main import main_bp
 from app.main.forms import AVATAR_TOO_LARGE_ERROR, AvatarForm, ChangePasswordForm, ProfileForm
-from app.models import Role, User
+from app.models import Notification, Role, User
 
 
 @main_bp.route("/")
@@ -18,6 +18,44 @@ def index():
     if current_user.role == Role.user:
         return redirect("/tickets/mine")
     return redirect("/tickets/queue")
+
+
+@main_bp.route("/notifications")
+@login_required
+def notifications():
+    rows = db.session.scalars(
+        db.select(Notification)
+        .where(Notification.user_id == current_user.id)
+        .order_by(Notification.created_at.desc(), Notification.id.desc())
+    ).all()
+    return render_template("main/notifications.html", notifications=rows)
+
+
+@main_bp.route("/notifications/<int:notification_id>/read", methods=["POST"])
+@login_required
+def notification_read(notification_id):
+    notification = db.session.get(Notification, notification_id)
+    if notification is None or notification.user_id != current_user.id:
+        abort(404)
+    notification.is_read = True
+    db.session.commit()
+    return redirect(notification.url)
+
+
+@main_bp.route("/notifications/read-all", methods=["POST"])
+@login_required
+def notifications_read_all():
+    rows = db.session.scalars(
+        db.select(Notification).where(
+            Notification.user_id == current_user.id,
+            Notification.is_read.is_(False),
+        )
+    ).all()
+    for row in rows:
+        row.is_read = True
+    db.session.commit()
+    flash("All notifications marked as read.", "success")
+    return redirect(url_for("main.notifications"))
 
 
 @main_bp.route("/profile", methods=["GET", "POST"])

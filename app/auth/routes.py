@@ -4,7 +4,8 @@ from flask_login import login_required, login_user, logout_user
 from app.auth import auth_bp
 from app.auth.forms import LoginForm, RegisterForm
 from app.extensions import db
-from app.models import User
+from app.models import Role, User
+from app.notifications import notify
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
@@ -21,6 +22,14 @@ def register():
         )
         user.set_password(form.password.data)
         db.session.add(user)
+        # Every new pending registration pings all admins (the /admin/ panel
+        # is where approvals happen).
+        admin_ids = db.session.scalars(db.select(User.id).where(User.role == Role.admin)).all()
+        notify(
+            admin_ids,
+            f"New user {user.username} is awaiting approval.",
+            "/admin/",
+        )
         db.session.commit()
         return redirect(url_for("auth.pending"))
     return render_template("auth/register.html", form=form)

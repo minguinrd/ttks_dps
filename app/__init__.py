@@ -10,6 +10,7 @@ from app.config import Config
 from app.extensions import csrf, db, login_manager, migrate
 from app.main import main_bp
 from app.main.routes import avatar_upload_error_response
+from app.notifications import unread_count
 from app.tickets import tickets_bp
 
 # Endpoints a user with a pending forced password change may still reach.
@@ -34,6 +35,11 @@ def create_app(config: dict | None = None) -> Flask:
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(tickets_bp)
+
+    @app.context_processor
+    def inject_notification_helpers():
+        # Lets templates call ``unread_count(current_user)`` for the navbar badge.
+        return {"unread_count": unread_count}
 
     @app.before_request
     def force_password_change():
