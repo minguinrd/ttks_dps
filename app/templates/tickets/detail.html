@@ -1,0 +1,107 @@
+{% extends "base.html" %} {% from "macros/badges.html" import status_badge, category_badge,
+priority_badge %} {% block title %}Ticket #{{ ticket.id }}{% endblock %} {% block content %}
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <h1 class="h4">
+      <span class="text-muted">#{{ ticket.id }}</span> {{ ticket.subject }}
+    </h1>
+    <div class="mb-2">
+      {{ status_badge(ticket.status) }} {{ category_badge(ticket.category) }} {{
+      priority_badge(ticket.priority) }}
+    </div>
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Requester</dt>
+      <dd class="col-sm-9">{{ ticket.requester.full_name or ticket.requester.username }}</dd>
+      <dt class="col-sm-3">Assignee</dt>
+      <dd class="col-sm-9">
+        {{ (ticket.assignee.full_name or ticket.assignee.username) if ticket.assignee else "—" }}
+      </dd>
+    </dl>
+    <p class="mb-0 mt-2">{{ ticket.description }}</p>
+  </div>
+</div>
+
+{# Action buttons (claim, resolve, close, reopen) are filled in by the ticket-actions task. #}
+{% block actions %}{% endblock %}
+
+<h2 class="h5">Thread</h2>
+{% for comment in comments %} {% if not comment.is_internal or current_user.role != "user" %}
+<div
+  class="card mb-2 {% if comment.is_internal %}border-warning bg-warning-subtle{% else %}shadow-sm{% endif %}"
+>
+  <div class="card-body py-2">
+    <div class="small text-muted">
+      {{ comment.author.full_name or comment.author.username }} · {{
+      comment.created_at.strftime("%Y-%m-%d %H:%M") }} {% if comment.is_internal %}
+      <span class="badge text-bg-warning">Internal note</span>
+      {% endif %}
+    </div>
+    <div class="mt-1">{{ comment.body }}</div>
+  </div>
+</div>
+{% endif %} {% else %}
+<p class="text-muted">No comments yet.</p>
+{% endfor %} {% if ticket.status != "closed" %}
+<div class="card shadow-sm mt-4">
+  <div class="card-body">
+    <h2 class="h6">Add a comment</h2>
+    <form method="post" action="{{ url_for('tickets.comment', ticket_id=ticket.id) }}" novalidate>
+      {{ comment_form.hidden_tag() }}
+      <div class="mb-3">
+        {{ comment_form.body.label(class_="form-label") }} {{
+        comment_form.body(class_="form-control" + (" is-invalid" if comment_form.body.errors else
+        ""), rows="3") }} {% for error in comment_form.body.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% if current_user.role != "user" %}
+      <div class="form-check mb-3">
+        {{ comment_form.is_internal(class_="form-check-input") }} {{
+        comment_form.is_internal.label(class_="form-check-label") }}
+      </div>
+      {% endif %}
+      <button type="submit" class="btn btn-primary">Post comment</button>
+    </form>
+  </div>
+</div>
+{% endif %} {% if can_edit %}
+<div class="card shadow-sm mt-4">
+  <div class="card-body">
+    <h2 class="h6">Edit ticket</h2>
+    <form method="post" action="{{ url_for('tickets.edit', ticket_id=ticket.id) }}" novalidate>
+      {{ edit_form.hidden_tag() }}
+      <div class="mb-3">
+        {{ edit_form.subject.label(class_="form-label") }} {{
+        edit_form.subject(class_="form-control" + (" is-invalid" if edit_form.subject.errors else
+        "")) }} {% for error in edit_form.subject.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <div class="mb-3">
+        {{ edit_form.description.label(class_="form-label") }} {{
+        edit_form.description(class_="form-control" + (" is-invalid" if edit_form.description.errors
+        else ""), rows="3") }} {% for error in edit_form.description.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          {{ edit_form.category.label(class_="form-label") }} {{
+          edit_form.category(class_="form-select" + (" is-invalid" if edit_form.category.errors else
+          "")) }} {% for error in edit_form.category.errors %}
+          <div class="invalid-feedback d-block">{{ error }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-md-6 mb-3">
+          {{ edit_form.priority.label(class_="form-label") }} {{
+          edit_form.priority(class_="form-select" + (" is-invalid" if edit_form.priority.errors else
+          "")) }} {% for error in edit_form.priority.errors %}
+          <div class="invalid-feedback d-block">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Save changes</button>
+    </form>
+  </div>
+</div>
+{% endif %} {% endblock %}

@@ -4,7 +4,7 @@ import pytest
 
 from app import create_app
 from app.extensions import db
-from app.models import User
+from app.models import Ticket, User
 
 
 @pytest.fixture()
@@ -52,6 +52,31 @@ def user_factory(app, db_schema):
             db.session.refresh(user)
             db.session.expunge(user)
             return user
+
+    return _factory
+
+
+@pytest.fixture()
+def ticket_factory(app, db_schema):
+    """Return ``ticket_factory(requester, **overrides) -> Ticket`` (committed)."""
+
+    def _factory(requester, **overrides):
+        overrides.setdefault("subject", "Broken monitor")
+        overrides.setdefault("description", "The screen flickers constantly.")
+        overrides.setdefault("category", "hardware")
+        overrides.setdefault("priority", "normal")
+        overrides.setdefault("status", "open")
+        if "assignee" in overrides:
+            assignee = overrides.pop("assignee")
+            overrides["assignee_id"] = assignee.id if assignee is not None else None
+        with app.app_context():
+            ticket = Ticket(requester_id=requester.id, **overrides)
+            db.session.add(ticket)
+            db.session.commit()
+            # Hand back a detached, fully loaded instance usable outside app context.
+            db.session.refresh(ticket)
+            db.session.expunge(ticket)
+            return ticket
 
     return _factory
 

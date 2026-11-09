@@ -1,0 +1,9 @@
+{% macro status_badge(status) %}
+{%- set colors = {"open": "secondary", "assigned": "primary", "resolved": "success", "closed": "dark"} -%}
+<span class="badge text-bg-{{ colors.get(status, 'secondary') }}">{{ status }}</span>
+{%- endmacro %} {% macro category_badge(category) %}
+<span class="badge text-bg-info">{{ category }}</span>
+{%- endmacro %} {% macro priority_badge(priority) %}
+{%- set colors = {"low": "light", "normal": "secondary", "high": "warning", "urgent": "danger"} -%}
+<span class="badge text-bg-{{ colors.get(priority, 'secondary') }}">{{ priority }}</span>
+{%- endmacro %}

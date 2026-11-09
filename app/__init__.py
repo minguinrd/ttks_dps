@@ -10,6 +10,7 @@ from app.config import Config
 from app.extensions import csrf, db, login_manager, migrate
 from app.main import main_bp
 from app.main.routes import avatar_upload_error_response
+from app.tickets import tickets_bp
 
 # Endpoints a user with a pending forced password change may still reach.
 PASSWORD_CHANGE_EXEMPT = {"static", "auth.logout", "main.profile_password"}
@@ -32,6 +33,7 @@ def create_app(config: dict | None = None) -> Flask:
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
+    app.register_blueprint(tickets_bp)
 
     @app.before_request
     def force_password_change():
