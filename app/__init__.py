@@ -1,12 +1,16 @@
 import os
 
-from flask import Flask
+from flask import Flask, flash, redirect, request, url_for
+from flask_login import current_user
 
 from app import models  # noqa: F401  # register ORM mappers so Flask-Migrate can autogenerate
 from app.auth import auth_bp
 from app.config import Config
 from app.extensions import csrf, db, login_manager, migrate
 from app.main import main_bp
+
+# Endpoints a user with a pending forced password change may still reach.
+PASSWORD_CHANGE_EXEMPT = {"static", "auth.logout", "main.profile_password"}
 
 
 def create_app(config: dict | None = None) -> Flask:
@@ -26,5 +30,15 @@ def create_app(config: dict | None = None) -> Flask:
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
+
+    @app.before_request
+    def force_password_change():
+        if (
+            current_user.is_authenticated
+            and current_user.must_change_password
+            and request.endpoint not in PASSWORD_CHANGE_EXEMPT
+        ):
+            flash("You must change your password before continuing.", "warning")
+            return redirect(url_for("main.profile_password"))
 
     return app

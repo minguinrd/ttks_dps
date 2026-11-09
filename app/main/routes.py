@@ -1,8 +1,14 @@
-from flask import redirect
-from flask_login import current_user, login_required
+from pathlib import Path
+from uuid import uuid4
 
+from flask import abort, current_app, flash, redirect, render_template, send_from_directory, url_for
+from flask_login import current_user, login_required
+from werkzeug.exceptions import RequestEntityTooLarge
+
+from app.extensions import db
 from app.main import main_bp
-from app.models import Role
+from app.main.forms import AVATAR_TOO_LARGE_ERROR, AvatarForm, ChangePasswordForm, ProfileForm
+from app.models import Role, User
 
 
 @main_bp.route("/")
@@ -13,3 +19,65 @@ def index():
     if current_user.role == Role.user:
         return redirect("/tickets/mine")
     return redirect("/tickets/queue")
+
+
+@main_bp.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    form = ProfileForm(obj=current_user)
+    if form.validate_on_submit():
+        current_user.full_name = form.full_name.data
+        current_user.email = form.email.data
+        db.session.commit()
+        flash("Profile updated.", "success")
+        return redirect(url_for("main.profile"))
+    return render_template("main/profile.html", form=form, avatar_form=AvatarForm())
+
+
+@main_bp.route("/profile/password", methods=["GET", "POST"])
+@login_required
+def profile_password():
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        current_user.set_password(form.new_password.data)
+        current_user.must_change_password = False
+        db.session.commit()
+        flash("Password changed.", "success")
+        return redirect(url_for("main.index"))
+    return render_template("main/profile_password.html", form=form)
+
+
+@main_bp.route("/profile/avatar", methods=["POST"])
+@login_required
+def avatar_upload():
+    # Display-only instance: prefills name/email without touching the request body.
+    profile_form = ProfileForm(formdata=None, obj=current_user)
+    try:
+        form = AvatarForm()
+        if form.validate_on_submit():
+            avatar_dir = Path(current_app.config["AVATAR_DIR"])
+            ext = Path(form.avatar.data.filename).suffix.lower().lstrip(".")
+            filename = f"{uuid4().hex}.{ext}"
+            old_path = current_user.avatar_path
+            form.avatar.data.save(avatar_dir / filename)
+            current_user.avatar_path = filename
+            db.session.commit()
+            if old_path:
+                (avatar_dir / old_path).unlink(missing_ok=True)
+            flash("Avatar updated.", "success")
+            return redirect(url_for("main.profile"))
+    except RequestEntityTooLarge:
+        # The body exceeded MAX_CONTENT_LENGTH before parsing; surface a form
+        # error instead of a bare 413 page.
+        form = AvatarForm(formdata=None)
+        form.avatar.errors = [AVATAR_TOO_LARGE_ERROR]
+    return render_template("main/profile.html", form=profile_form, avatar_form=form)
+
+
+@main_bp.route("/avatars/<int:user_id>")
+@login_required
+def serve_avatar(user_id):
+    user = db.session.get(User, user_id)
+    if user is None or not user.avatar_path:
+        abort(404)
+    return send_from_directory(current_app.config["AVATAR_DIR"], user.avatar_path)
