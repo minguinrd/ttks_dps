@@ -1,9 +1,38 @@
 # Agent notes (ttks_dps)
 
-## Repo state (verified)
-- Workspace is currently minimal: no `README*`, manifests, lockfiles, build/test/lint config, CI workflows, or git repository detected under `/home/minguin/Projects/ttks_dps` (only `.opencode/skills/` present).
-- No existing agent instruction files (`AGENTS.md` previously absent, no `CLAUDE.md`, `.cursor/rules/`, `.cursorrules`, `.github/copilot-instructions.md`, or repo-local `opencode.json`) were found.
+## Stack
 
-## Working guidance
-- Before running or suggesting build/test/lint commands, confirm the actual toolchain by locating manifests/config (e.g., `package.json`, `pyproject.toml`, `Cargo.toml`, `Makefile`, CI files) once they are added.
-- Do not assume language, framework, package manager, or test runner in this repository until verified from files in the repo.
+Flask 3 + Flask-SQLAlchemy + Flask-Login + Flask-WTF (CSRF) + Flask-Migrate
+(Alembic) over SQLite (WAL), served by gunicorn in Docker. Tests: pytest.
+Lint/format: ruff. Python 3.11+ syntax is fine (ruff `target-version = "py311"`).
+
+## Commands (run from repo root; venv is `.venv/`)
+
+- `.venv/bin/flask --app wsgi db upgrade` — apply migrations
+- `.venv/bin/flask --app wsgi seed-admin` — idempotent; needs `ADMIN_USERNAME` + `ADMIN_PASSWORD` in the environment
+- `.venv/bin/flask --app wsgi run` — dev server
+- `.venv/bin/pytest -q`
+- `.venv/bin/ruff check .` and `.venv/bin/ruff format --check .`
+- `docker compose up --build` — image on port 8000, data in volume `ttks_data:/data`
+
+## Layout
+
+Blueprints in `app/{auth,main,tickets,admin}` (wired in `app/__init__.py`),
+models in `app/models/` (user, ticket, notification), Alembic migrations in
+`migrations/`, templates in `app/templates/`, deployment in `Dockerfile`,
+`docker/entrypoint.sh`, `docker-compose.yml`.
+
+## Gotchas
+
+- `app/extensions.py` installs a SQLite connect listener: WAL journal +
+  `foreign_keys=ON` on every connection.
+- Env vars (see `.env.example`): `FLASK_APP`, `SECRET_KEY`, `DATA_DIR`,
+  `ADMIN_USERNAME`, `ADMIN_PASSWORD`. `flask seed-admin` errors without the
+  `ADMIN_*` pair; `flask` CLI does not load `.env` unless python-dotenv is
+  installed (export the vars or use `--app`).
+- Frontend assets come from CDNs (Bootstrap 5 + SweetAlert2 in
+  `app/templates/base.html`) — no local asset pipeline.
+- No email: notifications are in-app rows only (`app/notifications.py`).
+- The ticket status machine lives on `Ticket` (`app/models/ticket.py`) and
+  raises `InvalidTransition` on illegal moves — catch it in routes, never
+  mutate `Ticket.status` directly.
