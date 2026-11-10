@@ -99,6 +99,28 @@ def test_duplicate_username_rejected(client, app, user_factory):
         assert len(rows) == 1
 
 
+def test_suspended_user_loses_existing_session(app, client, user_factory, login):
+    victim = user_factory(username="revoke-victim")
+    admin = user_factory(username="revoke-admin", role="admin")
+    login(client, victim)
+
+    resp = client.get("/tickets/mine")
+
+    assert resp.status_code == 200
+
+    # An admin suspends the user while their session cookie is still alive.
+    admin_client = app.test_client()
+    login(admin_client, admin)
+    resp = admin_client.post(f"/admin/users/{victim.id}/suspend")
+
+    assert resp.status_code == 302
+
+    resp = client.get("/tickets/mine")
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"].startswith("/auth/login")
+
+
 def test_role_required_forbids_other_roles(app, client, user_factory, login):
     @app.get("/admin-only")
     @role_required("admin")

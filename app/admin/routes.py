@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta, timezone
 
 from flask import abort, flash, redirect, render_template, request, url_for
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from app.admin import admin_bp
 from app.admin.forms import AdminUserForm, DepartmentForm, ResetPasswordForm
 from app.extensions import db
-from app.models import Category, Department, Priority, Ticket, TicketStatus, User
+from app.models import Category, Department, Priority, Role, Ticket, TicketStatus, User
 from app.permissions import role_required
 
 
@@ -111,6 +111,11 @@ def user_edit(user_id):
     user = _user_or_404(user_id)
     form = AdminUserForm(edit_user=user)
     if form.validate_on_submit():
+        # An admin must never demote themselves: as the sole admin that would
+        # lock administration out permanently. Name/email self-edits stay fine.
+        if user.id == current_user.id and form.role.data != Role.admin:
+            flash("You cannot change your own role.", "danger")
+            return redirect(url_for("admin.users"))
         # The username is fixed; editing covers name, email, role, department.
         user.full_name = form.full_name.data
         user.email = form.email.data
@@ -144,6 +149,10 @@ def user_reject(user_id):
 @login_required
 @role_required("admin")
 def user_suspend(user_id):
+    # Suspending your own account would lock administration out permanently.
+    if user_id == current_user.id:
+        flash("You cannot suspend your own account.", "danger")
+        return redirect(url_for("admin.users"))
     return _set_status(user_id, "suspended", "User suspended.")
 
 

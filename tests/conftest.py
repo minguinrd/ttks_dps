@@ -29,10 +29,17 @@ def client(app):
 
 @pytest.fixture()
 def db_schema(app):
-    """Create the schema for one test and drop it afterwards."""
+    """Create the schema for one test and drop it afterwards.
+
+    The app context is released before the test runs: Flask reuses the current
+    app context for requests, which would share ``g`` and the DB session across
+    test-client requests (and cache Flask-Login's loaded user). Each request
+    gets a fresh context — as under a real WSGI server.
+    """
     with app.app_context():
         db.create_all()
-        yield
+    yield
+    with app.app_context():
         db.session.remove()
         db.drop_all()
 

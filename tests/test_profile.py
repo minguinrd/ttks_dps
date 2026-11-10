@@ -181,8 +181,8 @@ def _csrf_token(html):
 
 
 @pytest.fixture()
-def csrf_client(tmp_path):
-    """Logged-in client on an app with CSRF ENABLED (the production setting)."""
+def csrf_app(tmp_path):
+    """App with CSRF ENABLED (the production setting) plus one active user."""
     avatars = tmp_path / "avatars"
     avatars.mkdir()
     app = create_app(
@@ -201,14 +201,22 @@ def csrf_client(tmp_path):
         db.session.add(user)
         db.session.commit()
         user_id = user.id
-    client = app.test_client()
+    return SimpleNamespace(app=app, user_id=user_id, avatars=avatars)
+
+
+@pytest.fixture()
+def csrf_client(csrf_app):
+    """Logged-in client on the CSRF-enabled app."""
+    client = csrf_app.app.test_client()
     token = _csrf_token(client.get("/auth/login").get_data(as_text=True))
     resp = client.post(
         "/auth/login",
         data={"username": "csrfy", "password": "pass12345", "csrf_token": token},
     )
     assert resp.status_code == 302
-    return SimpleNamespace(app=app, client=client, user_id=user_id, avatars=avatars)
+    return SimpleNamespace(
+        app=csrf_app.app, client=client, user_id=csrf_app.user_id, avatars=csrf_app.avatars
+    )
 
 
 def test_avatar_oversize_rejected_with_csrf_enabled(csrf_client):
@@ -229,3 +237,50 @@ def test_avatar_oversize_rejected_with_csrf_enabled(csrf_client):
     assert list(csrf_client.avatars.iterdir()) == []
     with csrf_client.app.app_context():
         assert db.session.get(User, csrf_client.user_id).avatar_path is None
+
+
+def test_avatar_oversize_anonymous_redirected_to_login(csrf_app):
+    # The 413 handler fires before route decorators, so it must reapply the
+    # login gate instead of rendering the profile page.
+    client = csrf_app.app.test_client()
+    big = b"\x89PNG\r\n\x1a\n" + b"x" * (3 * 1024 * 1024)
+
+    resp = client.post(
+        "/profile/avatar",
+        data={"avatar": (BytesIO(big), "big.png", "image/png")},
+        content_type="multipart/form-data",
+    )
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"].startswith("/auth/login")
+    assert "File too large" not in resp.get_data(as_text=True)
+    assert list(csrf_app.avatars.iterdir()) == []
+
+
+def test_avatar_oversize_forced_change_redirected_to_password(csrf_app):
+    # The 413 handler must also reapply the forced-change gate.
+    with csrf_app.app.app_context():
+        user = User(username="csrf-flagged", status="active", must_change_password=True)
+        user.set_password("pass12345")
+        db.session.add(user)
+        db.session.commit()
+    client = csrf_app.app.test_client()
+    token = _csrf_token(client.get("/auth/login").get_data(as_text=True))
+    resp = client.post(
+        "/auth/login",
+        data={"username": "csrf-flagged", "password": "pass12345", "csrf_token": token},
+    )
+    assert resp.status_code == 302
+
+    big = b"\x89PNG\r\n\x1a\n" + b"x" * (3 * 1024 * 1024)
+    resp = client.post(
+        "/profile/avatar",
+        data={"avatar": (BytesIO(big), "big.png", "image/png")},
+        content_type="multipart/form-data",
+    )
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/profile/password"
+    with client.session_transaction() as sess:
+        assert any(message == PINNED_FLASH for _category, message in sess.get("_flashes", []))
+    assert list(csrf_app.avatars.iterdir()) == []

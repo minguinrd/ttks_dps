@@ -161,6 +161,63 @@ def test_suspend_and_reactivate(app, client, user_factory, login):
         assert db.session.get(User, victim.id).status == "active"
 
 
+def test_admin_cannot_suspend_self(app, client, user_factory, login):
+    admin = user_factory(username="self-suspend-admin", role="admin")
+    login(client, admin)
+
+    resp = client.post(f"/admin/users/{admin.id}/suspend", follow_redirects=True)
+
+    assert resp.status_code == 200
+    assert "You cannot suspend your own account." in resp.get_data(as_text=True)
+    with app.app_context():
+        user = db.session.get(User, admin.id)
+        assert user.status == "active"
+        assert user.role == "admin"
+
+
+def test_admin_cannot_demote_self(app, client, user_factory, login):
+    admin = user_factory(username="self-demote-admin", role="admin")
+    login(client, admin)
+
+    resp = client.post(
+        f"/admin/users/{admin.id}/edit",
+        data={
+            "username": "self-demote-admin",
+            "full_name": "Self Demote",
+            "email": "self-demote@example.com",
+            "role": "user",
+            "department": "",
+        },
+        follow_redirects=True,
+    )
+
+    assert resp.status_code == 200
+    assert "You cannot change your own role." in resp.get_data(as_text=True)
+    with app.app_context():
+        user = db.session.get(User, admin.id)
+        assert user.role == "admin"
+        assert user.status == "active"
+
+    # Self-editing name and email stays allowed; only the role change is blocked.
+    resp = client.post(
+        f"/admin/users/{admin.id}/edit",
+        data={
+            "username": "self-demote-admin",
+            "full_name": "Renamed Admin",
+            "email": "renamed@example.com",
+            "role": "admin",
+            "department": "",
+        },
+    )
+
+    assert resp.status_code == 302
+    with app.app_context():
+        user = db.session.get(User, admin.id)
+        assert user.full_name == "Renamed Admin"
+        assert user.email == "renamed@example.com"
+        assert user.role == "admin"
+
+
 def test_reset_password_sets_flag_and_new_password_works(app, client, user_factory, login):
     admin = user_factory(username="admin-resetter", role="admin")
     victim = user_factory(username="admin-resetee", role="user")

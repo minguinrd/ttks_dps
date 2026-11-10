@@ -17,6 +17,7 @@ from app.tickets import tickets_bp
 
 # Endpoints a user with a pending forced password change may still reach.
 PASSWORD_CHANGE_EXEMPT = {"static", "auth.logout", "main.profile_password"}
+FORCED_PASSWORD_CHANGE_MESSAGE = "You must change your password before continuing."
 
 
 def create_app(config: dict | None = None) -> Flask:
@@ -53,15 +54,21 @@ def create_app(config: dict | None = None) -> Flask:
             and current_user.must_change_password
             and request.endpoint not in PASSWORD_CHANGE_EXEMPT
         ):
-            flash("You must change your password before continuing.", "warning")
+            flash(FORCED_PASSWORD_CHANGE_MESSAGE, "warning")
             return redirect(url_for("main.profile_password"))
 
     @app.errorhandler(RequestEntityTooLarge)
     def handle_request_too_large(error):
         # Bodies over MAX_CONTENT_LENGTH are rejected while the body is being
-        # parsed — by CSRF (before_request) or by the forms — before any view
-        # logic runs. Show the avatar form error for avatar uploads; other
-        # endpoints keep werkzeug's default 413.
+        # parsed — by CSRF (before_request) — before the route decorators run,
+        # so the auth and forced-change gates must be reapplied here first.
+        if not current_user.is_authenticated:
+            return login_manager.unauthorized()
+        if current_user.must_change_password:
+            flash(FORCED_PASSWORD_CHANGE_MESSAGE, "warning")
+            return redirect(url_for("main.profile_password"))
+        # Show the avatar form error for avatar uploads; other endpoints keep
+        # werkzeug's default 413.
         if request.endpoint == "main.avatar_upload":
             return avatar_upload_error_response()
         return error.get_response()

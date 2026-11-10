@@ -68,7 +68,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <button type="submit" class="btn btn-danger btn-sm">Reject</button>
           </form>
-          {% elif user.status == "active" %}
+          {% elif user.status == "active" %} {% if user.id != current_user.id %}
           <form
             method="post"
             action="{{ url_for('admin.user_suspend', user_id=user.id) }}"
@@ -78,7 +78,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <button type="submit" class="btn btn-danger btn-sm">Suspend</button>
           </form>
-          {% elif user.status == "suspended" %}
+          {% endif %} {% elif user.status == "suspended" %}
           <form
             method="post"
             action="{{ url_for('admin.user_reactivate', user_id=user.id) }}"

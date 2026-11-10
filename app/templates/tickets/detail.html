@@ -21,6 +21,21 @@ priority_badge %} {% block title %}Ticket #{{ ticket.id }}{% endblock %} {% bloc
   </div>
 </div>
 
+{# Resolution summary: rendered whenever a resolution note was recorded. #}
+{% if ticket.resolution_note %}
+<div class="card shadow-sm mb-3 border-success">
+  <div class="card-body">
+    <h2 class="h6">Resolution</h2>
+    <p class="mb-1">{{ ticket.resolution_note }}</p>
+    {% if ticket.resolved_at %}
+    <div class="small text-muted">
+      Resolved at {{ ticket.resolved_at.strftime("%Y-%m-%d %H:%M") }}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
 {# Action buttons rendered from status + the viewer's role and stake in the ticket. #}
 {% set is_staff = current_user.role in ("agent", "admin") %}
 {% set is_requester = current_user.id == ticket.requester_id %}

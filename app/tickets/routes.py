@@ -183,6 +183,11 @@ def assign(ticket_id):
         flash("Select a valid agent.", "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
     agent = db.session.get(User, form.agent_id.data)
+    if agent is None or not agent.is_active:
+        # Suspended/pending targets are not assignable even if forged past the
+        # choice list.
+        flash("Select a valid agent.", "danger")
+        return redirect(url_for("tickets.detail", ticket_id=ticket.id))
     try:
         ticket.assign_to(agent, current_user)
     except InvalidTransition:
@@ -313,10 +318,12 @@ def _can_reopen(ticket: Ticket) -> bool:
 
 
 def _assign_form() -> AssignForm:
-    """Assign form with choices seeded with the agent/admin users."""
+    """Assign form with choices seeded with the active agent/admin users."""
     form = AssignForm()
     agents = db.session.scalars(
-        db.select(User).where(User.role.in_((Role.agent, Role.admin))).order_by(User.username)
+        db.select(User)
+        .where(User.role.in_((Role.agent, Role.admin)), User.status == "active")
+        .order_by(User.username)
     ).all()
     form.agent_id.choices = [(0, "Select an agent…")] + [
         (agent.id, agent.full_name or agent.username) for agent in agents

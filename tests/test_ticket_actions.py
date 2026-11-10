@@ -286,3 +286,56 @@ def test_reassign_to_different_agent(app, client, user_factory, login, ticket_fa
             db.select(Comment).filter_by(ticket_id=ticket.id).order_by(Comment.id)
         ).all()
         assert [comment.body for comment in comments] == ["Assigned to Jan Second by Rex Admin."]
+
+
+def test_resolution_block_rendered_for_all_viewers(
+    app, client, user_factory, login, ticket_factory
+):
+    owner = user_factory(username="block-owner")
+    agent = user_factory(username="block-agent", role="agent")
+    ticket = ticket_factory(owner, status="assigned", assignee=agent)
+    login(client, agent)
+
+    client.post(f"/tickets/{ticket.id}/resolve", data={"resolution_note": "Replaced the cable."})
+
+    resp = client.get(f"/tickets/{ticket.id}")
+
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    assert "Replaced the cable." in html
+    with app.app_context():
+        resolved_at = db.session.get(Ticket, ticket.id).resolved_at
+    assert resolved_at.strftime("%Y-%m-%d %H:%M") in html
+
+    # Everyone who can see the ticket sees the resolution, not just staff.
+    client.post("/auth/logout")
+    login(client, owner)
+
+    resp = client.get(f"/tickets/{ticket.id}")
+
+    assert "Replaced the cable." in resp.get_data(as_text=True)
+
+
+def test_suspended_agent_excluded_from_assign(app, client, user_factory, login, ticket_factory):
+    owner = user_factory(username="filter-owner")
+    agent = user_factory(username="filter-target", role="agent")
+    suspended = user_factory(username="filter-suspended", role="agent", status="suspended")
+    admin = user_factory(username="filter-admin", role="admin")
+    ticket = ticket_factory(owner)
+    login(client, admin)
+
+    html = client.get(f"/tickets/{ticket.id}").get_data(as_text=True)
+
+    assert agent.username in html
+    assert suspended.username not in html
+
+    resp = client.post(
+        f"/tickets/{ticket.id}/assign", data={"agent_id": suspended.id}, follow_redirects=True
+    )
+
+    assert resp.status_code == 200
+    assert "Select a valid agent." in resp.get_data(as_text=True)
+    with app.app_context():
+        row = db.session.get(Ticket, ticket.id)
+        assert row.status == "open"
+        assert row.assignee_id is None
