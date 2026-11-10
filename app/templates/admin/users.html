@@ -1,0 +1,99 @@
+{% extends "base.html" %} {% block title %}Users{% endblock %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Users</h1>
+  <a class="btn btn-primary" href="{{ url_for('admin.user_new') }}">New user</a>
+</div>
+
+{# Tabs narrow the list via ?status=; the default shows everyone. #}
+<ul class="nav nav-tabs mb-3">
+  {% for tab, label in [("all", "All"), ("pending", "Pending"), ("active", "Active"),
+  ("suspended", "Suspended")] %}
+  <li class="nav-item">
+    <a
+      class="nav-link {% if status == tab %}active{% endif %}"
+      href="{{ url_for('admin.users', status=tab) }}"
+      >{{ label }}</a
+    >
+  </li>
+  {% endfor %}
+</ul>
+
+{% if users %}
+<div class="card shadow-sm">
+  <table class="table table-hover align-middle mb-0">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Full name</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Department</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td>{{ user.username }}</td>
+        <td>{{ user.full_name or "—" }}</td>
+        <td>{{ user.email or "—" }}</td>
+        <td>{{ user.role }}</td>
+        <td>{{ user.department.name if user.department else "—" }}</td>
+        <td>
+          {%- set colors = {"pending": "warning", "active": "success", "suspended": "danger"} -%}
+          <span class="badge text-bg-{{ colors.get(user.status, 'secondary') }}"
+            >{{ user.status }}</span
+          >
+        </td>
+        <td class="text-end">
+          <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.user_edit', user_id=user.id) }}"
+            >Edit</a
+          >
+          {% if user.status == "pending" %}
+          <form
+            method="post"
+            action="{{ url_for('admin.user_approve', user_id=user.id) }}"
+            class="d-inline"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-success btn-sm">Approve</button>
+          </form>
+          <form
+            method="post"
+            action="{{ url_for('admin.user_reject', user_id=user.id) }}"
+            class="d-inline"
+            data-confirm="Reject this registration? The account will be suspended."
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+          </form>
+          {% elif user.status == "active" %}
+          <form
+            method="post"
+            action="{{ url_for('admin.user_suspend', user_id=user.id) }}"
+            class="d-inline"
+            data-confirm="Suspend this user? They will no longer be able to log in."
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-danger btn-sm">Suspend</button>
+          </form>
+          {% elif user.status == "suspended" %}
+          <form
+            method="post"
+            action="{{ url_for('admin.user_reactivate', user_id=user.id) }}"
+            class="d-inline"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-success btn-sm">Reactivate</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card card-body shadow-sm text-muted">No users match this filter.</div>
+{% endif %} {% endblock %}

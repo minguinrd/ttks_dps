@@ -5,6 +5,7 @@ from flask_login import current_user
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from app import models  # noqa: F401  # register ORM mappers so Flask-Migrate can autogenerate
+from app.admin import admin_bp
 from app.auth import auth_bp
 from app.config import Config
 from app.extensions import csrf, db, login_manager, migrate
@@ -35,6 +36,7 @@ def create_app(config: dict | None = None) -> Flask:
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(tickets_bp)
+    app.register_blueprint(admin_bp)
 
     @app.context_processor
     def inject_notification_helpers():
