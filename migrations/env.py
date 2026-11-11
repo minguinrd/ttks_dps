@@ -16,11 +16,11 @@ logger = logging.getLogger("alembic.env")
 
 def get_engine():
     try:
-        # this works with Flask-SQLAlchemy<3 and Alchemical
-        return current_app.extensions["migrate"].db.get_engine()
-    except (TypeError, AttributeError):
         # this works with Flask-SQLAlchemy>=3
         return current_app.extensions["migrate"].db.engine
+    except (TypeError, AttributeError):
+        # this works with Flask-SQLAlchemy<3 and Alchemical
+        return current_app.extensions["migrate"].db.get_engine()
 
 
 def get_engine_url():
@@ -93,6 +93,18 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        # SQLite batch migrations drop and recreate referenced tables, but the
+        # app's connect listener forces foreign_keys=ON on every connection —
+        # which rejects DROP TABLE of a parent (e.g. users) while child rows
+        # (tickets/comments/notifications) reference it. PRAGMA foreign_keys is
+        # per-connection and a no-op inside a transaction, so it must be set
+        # here, before begin_transaction(). It runs on the raw DBAPI
+        # connection: executing it through SQLAlchemy would autobegin a logical
+        # transaction, making alembic's begin_transaction() think it does not
+        # own the transaction — the version stamp would then roll back on
+        # close. App connections are unaffected: they get FK enforcement from
+        # the listener in app/extensions.py.
+        connection.connection.driver_connection.execute("PRAGMA foreign_keys=OFF")
         context.configure(connection=connection, target_metadata=get_metadata(), **conf_args)
 
         with context.begin_transaction():
