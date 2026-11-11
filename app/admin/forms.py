@@ -61,10 +61,26 @@ class ResetPasswordForm(FlaskForm):
 
 
 class DepartmentForm(FlaskForm):
+    """Create or rename a department.
+
+    Pass ``edit_department`` when renaming: the duplicate check then skips the
+    row being edited, so the department may keep its own name.
+    """
+
     name = StringField("Name", validators=[DataRequired(), Length(max=100)])
     submit = SubmitField("Add department")
 
+    def __init__(self, *args, edit_department: Department | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.edit_department = edit_department
+        if edit_department is not None:
+            self.submit.label.text = "Save"
+
     def validate_name(self, field):
         existing = db.session.scalar(db.select(Department).filter_by(name=field.data))
-        if existing is not None:
-            raise ValidationError("Department name already taken.")
+        if existing is None:
+            return
+        # Renaming keeps the current name valid: only *other* rows collide.
+        if self.edit_department is not None and existing.id == self.edit_department.id:
+            return
+        raise ValidationError("Department name already taken.")

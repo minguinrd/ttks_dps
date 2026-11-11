@@ -284,6 +284,81 @@ def test_delete_department_with_users_blocked(app, client, user_factory, login):
         assert db.session.get(Department, department_id) is not None
 
 
+def test_department_rename(app, client, user_factory, login):
+    admin = user_factory(username="admin-deptrename", role="admin")
+    with app.app_context():
+        department = Department(name="Engineering")
+        db.session.add(department)
+        db.session.commit()
+        department_id = department.id
+    login(client, admin)
+
+    resp = client.post(f"/admin/departments/{department_id}/edit", data={"name": "R&D"})
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/admin/departments"
+    with app.app_context():
+        assert db.session.get(Department, department_id).name == "R&D"
+
+
+def test_department_rename_duplicate_rejected(app, client, user_factory, login):
+    admin = user_factory(username="admin-deptdup", role="admin")
+    with app.app_context():
+        first = Department(name="Alpha")
+        second = Department(name="Beta")
+        db.session.add_all([first, second])
+        db.session.commit()
+        first_id, second_id = first.id, second.id
+    login(client, admin)
+
+    resp = client.post(f"/admin/departments/{first_id}/edit", data={"name": "Beta"})
+
+    assert resp.status_code == 200
+    assert "Department name already taken." in resp.get_data(as_text=True)
+    with app.app_context():
+        assert db.session.get(Department, first_id).name == "Alpha"
+        assert db.session.get(Department, second_id).name == "Beta"
+
+
+def test_department_rename_keep_own_name(app, client, user_factory, login):
+    admin = user_factory(username="admin-deptkeep", role="admin")
+    with app.app_context():
+        department = Department(name="Gamma")
+        db.session.add(department)
+        db.session.commit()
+        department_id = department.id
+    login(client, admin)
+
+    resp = client.post(f"/admin/departments/{department_id}/edit", data={"name": "Gamma"})
+
+    assert resp.status_code == 302
+
+
+def test_department_edit_forbidden_for_agent(app, client, user_factory, login):
+    agent = user_factory(username="admin-deptagent", role="agent")
+    with app.app_context():
+        department = Department(name="Delta")
+        db.session.add(department)
+        db.session.commit()
+        department_id = department.id
+    login(client, agent)
+
+    resp = client.post(f"/admin/departments/{department_id}/edit", data={"name": "Omega"})
+
+    assert resp.status_code == 403
+    with app.app_context():
+        assert db.session.get(Department, department_id).name == "Delta"
+
+
+def test_department_edit_missing_404(client, user_factory, login):
+    admin = user_factory(username="admin-deptmissing", role="admin")
+    login(client, admin)
+
+    resp = client.post("/admin/departments/999999/edit", data={"name": "Ghost"})
+
+    assert resp.status_code == 404
+
+
 def test_compute_dashboard_stats(app, user_factory, ticket_factory):
     requester = user_factory(username="admin-stats-req")
     agent = user_factory(username="admin-stats-agent", role="agent")

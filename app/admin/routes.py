@@ -221,6 +221,24 @@ def department_delete(department_id):
     return redirect(url_for("admin.departments"))
 
 
+@admin_bp.route("/departments/<int:department_id>/edit", methods=["GET", "POST"])
+@login_required
+@role_required("admin")
+def department_edit(department_id):
+    department = db.session.get(Department, department_id)
+    if department is None:
+        abort(404)
+    form = DepartmentForm(edit_department=department)
+    if form.validate_on_submit():
+        department.name = form.name.data
+        db.session.commit()
+        flash("Department updated.", "success")
+        return redirect(url_for("admin.departments"))
+    if not form.is_submitted():
+        form.name.data = department.name
+    return render_template("admin/department_edit.html", form=form, department=department)
+
+
 def _user_or_404(user_id: int) -> User:
     user = db.session.get(User, user_id)
     if user is None:
