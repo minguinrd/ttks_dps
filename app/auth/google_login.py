@@ -3,7 +3,8 @@
 import secrets
 
 from app.extensions import db
-from app.models import User
+from app.models import Role, User
+from app.notifications import notify
 
 
 class GoogleAuthError(Exception):
@@ -18,7 +19,8 @@ def find_or_create_google_user(email: str, *, sub: str, name: str | None) -> tup
     *different* ``google_sub`` is an identity conflict and raises
     :class:`GoogleAuthError`. A link-less email match gets its ``google_sub``
     set. New users land as ``pending`` so the admin approval flow still gates
-    every first sign-in. Commits the session.
+    every first sign-in, and notify all admins just like self-registration.
+    Commits the session.
     """
     user = db.session.scalar(db.select(User).filter_by(google_sub=sub))
     if user is not None:
@@ -52,5 +54,14 @@ def find_or_create_google_user(email: str, *, sub: str, name: str | None) -> tup
     # accounts until an admin sets one.
     user.set_password(secrets.token_urlsafe(32))
     db.session.add(user)
+    # Every new pending account pings all admins (the /admin/ panel is where
+    # approvals happen) — exactly like self-registration. Existing users
+    # retrying Google never reach this branch.
+    admin_ids = db.session.scalars(db.select(User.id).where(User.role == Role.admin)).all()
+    notify(
+        admin_ids,
+        f"New user {user.username} is awaiting approval.",
+        "/admin/",
+    )
     db.session.commit()
     return user, True

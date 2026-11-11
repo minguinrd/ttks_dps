@@ -6,7 +6,7 @@ import pytest
 
 from app import create_app
 from app.extensions import db
-from app.models import User
+from app.models import Notification, User
 
 PENDING_MESSAGE = "Your account is awaiting admin approval."
 SUSPENDED_MESSAGE = "This account has been suspended. Contact the administrator."
@@ -232,3 +232,61 @@ def test_google_routes_without_config(client):
         assert resp.headers["Location"] == "/auth/login"
         page = client.get("/auth/login")
         assert GOOGLE_FAILURE_MESSAGE in page.get_data(as_text=True)
+
+
+def test_google_new_user_notifies_admins(app, google_app, user_factory, monkeypatch):
+    admin = user_factory(username="g-admin", role="admin")
+    user_factory(username="g-bystander")
+    stub_google(monkeypatch, email="New.Person@Example.com", sub="g-7", name="New Person")
+    client = google_app.test_client()
+
+    resp = client.get("/auth/google/callback")
+
+    assert resp.status_code == 302
+    # Same ping as self-registration: every admin, nobody else.
+    with app.app_context():
+        rows = db.session.scalars(db.select(Notification).order_by(Notification.id)).all()
+        assert [row.user_id for row in rows] == [admin.id]
+        assert rows[0].message == "New user new.person is awaiting approval."
+        assert rows[0].url == "/admin/"
+        assert rows[0].ticket_id is None
+        assert rows[0].is_read is False
+
+
+def test_pending_google_retry_does_not_notify_again(app, google_app, user_factory, monkeypatch):
+    admin = user_factory(username="g-admin-retry", role="admin")
+    stub_google(monkeypatch, email="re.retry@example.com", sub="g-8")
+    client = google_app.test_client()
+
+    client.get("/auth/google/callback")  # first sign-in creates the pending user
+    with app.app_context():
+        rows = db.session.scalars(db.select(Notification).filter_by(user_id=admin.id)).all()
+        assert len(rows) == 1
+        # Mark read first: notify() dedupes identical *unread* rows, so a read
+        # row must not shield a regression that pings on every retry.
+        for row in rows:
+            row.is_read = True
+        db.session.commit()
+
+    client.get("/auth/google/callback")  # still-pending user retries Google
+
+    with app.app_context():
+        rows = db.session.scalars(db.select(Notification).filter_by(user_id=admin.id)).all()
+        assert len(rows) == 1  # no additional notification
+
+
+def test_google_sub_conflict_refused(app, google_app, user_factory, monkeypatch):
+    user = user_factory(username="linky", email="linky@example.com", google_sub="sub-1")
+    stub_google(monkeypatch, email="linky@example.com", sub="sub-2")
+    client = google_app.test_client()
+
+    resp = client.get("/auth/google/callback", follow_redirects=True)
+
+    assert resp.status_code == 200
+    assert GOOGLE_FAILURE_MESSAGE in resp.get_data(as_text=True)
+    with client.session_transaction() as sess:
+        assert "_user_id" not in sess
+    with app.app_context():
+        assert db.session.scalar(db.select(db.func.count(User.id))) == 1
+        stored = db.session.get(User, user.id)
+        assert stored.google_sub == "sub-1"
