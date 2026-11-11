@@ -92,6 +92,25 @@ def test_google_login_redirects_to_google(google_app, monkeypatch):
     assert "/auth/google/callback" in query["redirect_uri"][0]
 
 
+def test_google_redirect_failure_returns_generic_error(google_app, monkeypatch):
+    from app.extensions import oauth
+
+    # Discovery failure (e.g. Google unreachable): the route must fall back to
+    # the generic message instead of raising a 500.
+    def _discovery_boom(**kwargs):
+        raise RuntimeError("OIDC discovery failed")
+
+    monkeypatch.setattr(oauth.google, "load_server_metadata", _discovery_boom)
+    client = google_app.test_client()
+
+    resp = client.get("/auth/google")
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/auth/login"
+    page = client.get("/auth/login")
+    assert GOOGLE_FAILURE_MESSAGE in page.get_data(as_text=True)
+
+
 def test_google_new_email_creates_pending_user(app, google_app, db_schema, monkeypatch):
     stub_google(monkeypatch, email="New.Person@Example.com", sub="g-1", name="New Person")
     client = google_app.test_client()

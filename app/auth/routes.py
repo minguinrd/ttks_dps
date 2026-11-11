@@ -83,7 +83,12 @@ def google():
     if not _google_configured():
         return _google_failure()
     google_client = oauth.create_client("google")
-    return google_client.authorize_redirect(url_for("auth.google_callback", _external=True))
+    try:
+        # Same third-party boundary as the callback: OIDC discovery or redirect
+        # construction failures collapse into the generic message, not a 500.
+        return google_client.authorize_redirect(url_for("auth.google_callback", _external=True))
+    except Exception:
+        return _google_failure()
 
 
 @auth_bp.route("/google/callback")
