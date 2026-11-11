@@ -12,6 +12,10 @@ class Config:
     MAX_CONTENT_LENGTH = 2 * 1024 * 1024
     AVATAR_DIR = f"{DATA_DIR}/avatars"
     WTF_CSRF_ENABLED = True
+    # Optional Google sign-in (Authlib reads these via its GOOGLE_* config
+    # convention). Both must be non-empty to enable the button and routes.
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 
 
 class TestConfig(Config):

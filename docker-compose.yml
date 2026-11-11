@@ -8,6 +8,9 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      # Optional Google sign-in; empty defaults keep the feature off.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     volumes:
       - ttks_data:/data
     restart: unless-stopped

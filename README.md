@@ -53,6 +53,7 @@ Pinned in `.env.example` and read by `app/config.py`:
 | `DATA_DIR` | Where the SQLite DB and avatars live (default `./data`, `/data` in Docker) |
 | `ADMIN_USERNAME` | Initial admin created by `flask seed-admin` |
 | `ADMIN_PASSWORD` | Initial admin password (forced change on first login) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional Google sign-in — the "Sign in with Google" button appears only when both are set |
 
 `FLASK_APP=wsgi:app` is also set there for the flask CLI (the Docker image sets
 it itself).

@@ -9,7 +9,7 @@ from app.admin import admin_bp
 from app.auth import auth_bp
 from app.cli import seed_admin
 from app.config import Config
-from app.extensions import csrf, db, login_manager, migrate
+from app.extensions import csrf, db, login_manager, migrate, oauth
 from app.main import main_bp
 from app.main.routes import avatar_upload_error_response
 from app.notifications import unread_count
@@ -34,6 +34,17 @@ def create_app(config: dict | None = None) -> Flask:
     csrf.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
+    oauth.init_app(app)
+    # Google sign-in is fully env-gated: without both values the button is
+    # hidden and the /auth/google routes refuse with a generic flash. The
+    # GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET config keys double as Authlib's
+    # client credentials (its GOOGLE_* load_config convention).
+    if app.config["GOOGLE_CLIENT_ID"] and app.config["GOOGLE_CLIENT_SECRET"]:
+        oauth.register(
+            "google",
+            server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+            client_kwargs={"scope": "openid email profile"},
+        )
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -46,6 +57,15 @@ def create_app(config: dict | None = None) -> Flask:
     def inject_notification_helpers():
         # Lets templates call ``unread_count(current_user)`` for the navbar badge.
         return {"unread_count": unread_count}
+
+    @app.context_processor
+    def inject_google_enabled():
+        # Gates the "Sign in with Google" button on the login page.
+        return {
+            "google_enabled": bool(
+                app.config["GOOGLE_CLIENT_ID"] and app.config["GOOGLE_CLIENT_SECRET"]
+            )
+        }
 
     @app.before_request
     def force_password_change():

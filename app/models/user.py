@@ -30,6 +30,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     full_name = db.Column(db.String(120))
     email = db.Column(db.String(255))
+    # Google account id (OIDC ``sub``) once a Google sign-in is linked.
+    google_sub = db.Column(db.String(64), unique=True, nullable=True)
     department_id = db.Column(db.Integer, db.ForeignKey("departments.id"))
     status = db.Column(db.String(20), nullable=False, default="pending")
     role = db.Column(db.String(20), nullable=False, default="user")

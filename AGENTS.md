@@ -27,7 +27,9 @@ models in `app/models/` (user, ticket, notification), Alembic migrations in
 - `app/extensions.py` installs a SQLite connect listener: WAL journal +
   `foreign_keys=ON` on every connection.
 - Env vars (see `.env.example`): `FLASK_APP`, `SECRET_KEY`, `DATA_DIR`,
-  `ADMIN_USERNAME`, `ADMIN_PASSWORD`. `flask seed-admin` errors without the
+  `ADMIN_USERNAME`, `ADMIN_PASSWORD`, plus optional `GOOGLE_CLIENT_ID` /
+  `GOOGLE_CLIENT_SECRET` (both set gates the Google login button and
+  `/auth/google` routes). `flask seed-admin` errors without the
   `ADMIN_*` pair; `flask` CLI does not load `.env` unless python-dotenv is
   installed (export the vars or use `--app`).
 - Frontend assets come from CDNs (Bootstrap 5 + SweetAlert2 in
