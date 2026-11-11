@@ -131,3 +131,22 @@ def test_print_css_linked(client, user_factory, login):
 
     assert resp.status_code == 200
     assert "print.css" in resp.get_data(as_text=True)
+
+
+def test_detail_print_hides_forms(client, user_factory, login, ticket_factory):
+    agent = user_factory(role="agent")
+    requester = user_factory(role="user", username="reports-clean-req")
+    ticket = ticket_factory(requester, subject="CLEAN-PRINT", status="assigned", assignee=agent)
+
+    for viewer in (agent, requester):
+        login(client, viewer)
+        html = client.get(f"/tickets/{ticket.id}").get_data(as_text=True)
+
+        assert "window.print()" in html
+        # Every form in the page body must be print-hidden so the printed
+        # ticket shows only header, thread and resolution. The navbar's logout
+        # form sits before <main> and is hidden wholesale by the .navbar rule.
+        forms = re.findall(r"<form[^>]*>", html.split("<main", 1)[1])
+        assert forms
+        for form in forms:
+            assert "no-print" in form, f"interactive form prints with the page: {form}"

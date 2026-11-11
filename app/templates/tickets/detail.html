@@ -53,16 +53,24 @@ priority_badge %} {% block title %}Ticket #{{ ticket.id }}{% endblock %} {% bloc
 {% set can_close = ticket.status in ("open", "assigned", "resolved") and (is_requester or is_assignee
 or is_staff) %}
 {% if can_claim or can_release or can_assign or can_resolve or can_reopen or can_close %}
-<div class="card shadow-sm mb-3">
+<div class="card shadow-sm mb-3 no-print">
   <div class="card-body">
     <div class="d-flex flex-wrap gap-2 align-items-start">
       {% if can_claim %}
-      <form method="post" action="{{ url_for('tickets.claim', ticket_id=ticket.id) }}">
+      <form
+        method="post"
+        action="{{ url_for('tickets.claim', ticket_id=ticket.id) }}"
+        class="no-print"
+      >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <button type="submit" class="btn btn-primary">Claim</button>
       </form>
       {% endif %} {% if can_release %}
-      <form method="post" action="{{ url_for('tickets.release', ticket_id=ticket.id) }}">
+      <form
+        method="post"
+        action="{{ url_for('tickets.release', ticket_id=ticket.id) }}"
+        class="no-print"
+      >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <button type="submit" class="btn btn-outline-secondary">Release</button>
       </form>
@@ -70,7 +78,7 @@ or is_staff) %}
       <form
         method="post"
         action="{{ url_for('tickets.assign', ticket_id=ticket.id) }}"
-        class="d-flex gap-2"
+        class="d-flex gap-2 no-print"
       >
         {{ assign_form.hidden_tag() }} {{ assign_form.agent_id(class_="form-select") }}
         <button type="submit" class="btn btn-outline-primary">Assign</button>
@@ -79,7 +87,7 @@ or is_staff) %}
       <form
         method="post"
         action="{{ url_for('tickets.resolve', ticket_id=ticket.id) }}"
-        class="w-100"
+        class="w-100 no-print"
         novalidate
       >
         {{ resolve_form.hidden_tag() }}
@@ -97,7 +105,7 @@ or is_staff) %}
       <form
         method="post"
         action="{{ url_for('tickets.reopen', ticket_id=ticket.id) }}"
-        class="w-100"
+        class="w-100 no-print"
         data-confirm="Reopen this ticket? It goes back to the assigned state."
       >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -111,6 +119,7 @@ or is_staff) %}
       <form
         method="post"
         action="{{ url_for('tickets.close', ticket_id=ticket.id) }}"
+        class="no-print"
         data-confirm="Close this ticket? It will accept no further comments or edits."
       >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -140,10 +149,15 @@ or is_staff) %}
 {% endif %} {% else %}
 <p class="text-muted">No comments yet.</p>
 {% endfor %} {% if ticket.status != "closed" %}
-<div class="card shadow-sm mt-4">
+<div class="card shadow-sm mt-4 no-print">
   <div class="card-body">
     <h2 class="h6">Add a comment</h2>
-    <form method="post" action="{{ url_for('tickets.comment', ticket_id=ticket.id) }}" novalidate>
+    <form
+      method="post"
+      action="{{ url_for('tickets.comment', ticket_id=ticket.id) }}"
+      class="no-print"
+      novalidate
+    >
       {{ comment_form.hidden_tag() }}
       <div class="mb-3">
         {{ comment_form.body.label(class_="form-label") }} {{
@@ -163,10 +177,15 @@ or is_staff) %}
   </div>
 </div>
 {% endif %} {% if can_edit %}
-<div class="card shadow-sm mt-4">
+<div class="card shadow-sm mt-4 no-print">
   <div class="card-body">
     <h2 class="h6">Edit ticket</h2>
-    <form method="post" action="{{ url_for('tickets.edit', ticket_id=ticket.id) }}" novalidate>
+    <form
+      method="post"
+      action="{{ url_for('tickets.edit', ticket_id=ticket.id) }}"
+      class="no-print"
+      novalidate
+    >
       {{ edit_form.hidden_tag() }}
       <div class="mb-3">
         {{ edit_form.subject.label(class_="form-label") }} {{
