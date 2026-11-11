@@ -1,0 +1,182 @@
+{% extends "base.html" %} {% from "macros/badges.html" import status_badge, category_badge,
+priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Reports</h1>
+  <button class="btn btn-secondary no-print" onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+{# Filters narrow the report via query params; an empty value means "no filter". #}
+<form method="get" action="{{ url_for('reports.index') }}" class="card shadow-sm mb-3 no-print">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-md">
+        {{ form.date_from.label(class_="form-label") }} {{ form.date_from(class_="form-control") }}
+      </div>
+      <div class="col-md">
+        {{ form.date_to.label(class_="form-label") }} {{ form.date_to(class_="form-control") }}
+      </div>
+      <div class="col-md">
+        {{ form.status.label(class_="form-label") }} {{ form.status(class_="form-select") }}
+      </div>
+      <div class="col-md">
+        {{ form.category.label(class_="form-label") }} {{ form.category(class_="form-select") }}
+      </div>
+      <div class="col-md">
+        {{ form.priority.label(class_="form-label") }} {{ form.priority(class_="form-select") }}
+      </div>
+      <div class="col-md">
+        {{ form.department_id.label(class_="form-label") }} {{
+        form.department_id(class_="form-select") }}
+      </div>
+      <div class="col-md">
+        {{ form.requester_id.label(class_="form-label") }} {{
+        form.requester_id(class_="form-select") }}
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Apply</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('reports.index') }}">Reset</a>
+      </div>
+    </div>
+  </div>
+</form>
+
+{# Everything between the summary and the table prints as one document. #}
+<div class="printable">
+  <div class="row g-3 mb-3">
+    <div class="col">
+      <div class="card shadow-sm text-center">
+        <div class="card-body py-2">
+          <div class="text-muted small">Total</div>
+          <div class="fs-2 fw-semibold">{{ summary.total }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card shadow-sm text-center">
+        <div class="card-body py-2">
+          <div class="text-muted small">Open</div>
+          <div class="fs-2 fw-semibold">{{ summary.open }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card shadow-sm text-center">
+        <div class="card-body py-2">
+          <div class="text-muted small">Assigned</div>
+          <div class="fs-2 fw-semibold">{{ summary.assigned }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card shadow-sm text-center">
+        <div class="card-body py-2">
+          <div class="text-muted small">Resolved</div>
+          <div class="fs-2 fw-semibold">{{ summary.resolved }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card shadow-sm text-center">
+        <div class="card-body py-2">
+          <div class="text-muted small">Closed</div>
+          <div class="fs-2 fw-semibold">{{ summary.closed }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-4">
+      <div class="card shadow-sm">
+        <div class="card-header">By category</div>
+        <table class="table mb-0">
+          <tbody>
+            {% for name, count in summary.by_category.items() %}
+            <tr>
+              <td>{{ name }}</td>
+              <td class="text-end">{{ count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm">
+        <div class="card-header">By priority</div>
+        <table class="table mb-0">
+          <tbody>
+            {% for name, count in summary.by_priority.items() %}
+            <tr>
+              <td>{{ name }}</td>
+              <td class="text-end">{{ count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm">
+        <div class="card-header">Needs attention</div>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item d-flex justify-content-between">
+            Oldest unassigned ticket
+            <span>
+              {{ summary.oldest_unassigned.strftime("%Y-%m-%d %H:%M") if summary.oldest_unassigned
+              else "—" }}
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {% if tickets %}
+  <div class="card shadow-sm">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Subject</th>
+          <th>Status</th>
+          <th>Category</th>
+          <th>Priority</th>
+          <th>Requester</th>
+          <th>Department</th>
+          <th>Assignee</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ticket in tickets %}
+        <tr>
+          <td>
+            <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}">#{{ ticket.id }}</a>
+          </td>
+          <td>
+            <a
+              href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}"
+              class="text-decoration-none"
+              >{{ ticket.subject }}</a
+            >
+          </td>
+          <td>{{ status_badge(ticket.status) }}</td>
+          <td>{{ category_badge(ticket.category) }}</td>
+          <td>{{ priority_badge(ticket.priority) }}</td>
+          <td>{{ ticket.requester.full_name or ticket.requester.username }}</td>
+          <td>{{ ticket.department.name if ticket.department else "—" }}</td>
+          <td>
+            {{ (ticket.assignee.full_name or ticket.assignee.username) if ticket.assignee else "—" }}
+          </td>
+          <td>{{ ticket.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card card-body shadow-sm text-muted">No tickets match the current filters.</div>
+  {% endif %}
+</div>
+{% endblock %}

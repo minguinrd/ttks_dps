@@ -13,6 +13,7 @@ from app.extensions import csrf, db, login_manager, migrate, oauth
 from app.main import main_bp
 from app.main.routes import avatar_upload_error_response
 from app.notifications import unread_count
+from app.reports import reports_bp
 from app.tickets import tickets_bp
 
 # Endpoints a user with a pending forced password change may still reach.
@@ -49,6 +50,7 @@ def create_app(config: dict | None = None) -> Flask:
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(tickets_bp)
+    app.register_blueprint(reports_bp)
     app.register_blueprint(admin_bp)
 
     app.cli.add_command(seed_admin)

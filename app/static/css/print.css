@@ -1,0 +1,29 @@
+/* Print styles: "Print / Save as PDF" is the browser's print dialog. */
+@media print {
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+
+  body {
+    font-size: 10pt;
+  }
+
+  /* Screen chrome and controls never print; flash messages (.alert-dismissible
+     in base.html) are transient feedback, not report content. */
+  .navbar,
+  .no-print,
+  .alert-dismissible {
+    display: none !important;
+  }
+
+  /* Long tables repeat their header row on every page. */
+  thead {
+    display: table-header-group;
+  }
+
+  /* A ticket/row must never be split across two pages. */
+  tr {
+    page-break-inside: avoid;
+  }
+}

@@ -2,9 +2,12 @@
 priority_badge %} {% block title %}Ticket #{{ ticket.id }}{% endblock %} {% block content %}
 <div class="card shadow-sm mb-3">
   <div class="card-body">
-    <h1 class="h4">
-      <span class="text-muted">#{{ ticket.id }}</span> {{ ticket.subject }}
-    </h1>
+    <div class="d-flex justify-content-between align-items-start gap-2">
+      <h1 class="h4 mb-0">
+        <span class="text-muted">#{{ ticket.id }}</span> {{ ticket.subject }}
+      </h1>
+      <button class="btn btn-secondary no-print" onclick="window.print()">Print / Save as PDF</button>
+    </div>
     <div class="mb-2">
       {{ status_badge(ticket.status) }} {{ category_badge(ticket.category) }} {{
       priority_badge(ticket.priority) }}
