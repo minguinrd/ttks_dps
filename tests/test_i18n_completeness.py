@@ -69,3 +69,22 @@ def test_spanish_user_sees_spanish_queue(app, client, user_factory, login):
 
     assert re.search(r"<h1[^>]*>Cola de tickets</h1>", html)
     assert not re.search(r"<h1[^>]*>Ticket Queue</h1>", html)
+
+
+def test_role_labels_translate_correctly():
+    # Role words name the *person*, not the administrative function: a user
+    # with role="admin" is an "Administrador", never "Administración".
+    # Keys asserted: the AdminUserForm role option labels ("User"/"Agent"/
+    # "Admin", app/admin/forms.py role_labels) and the role badge labels
+    # ("user"/"agent"/"admin", macros/badges.html role_label).
+    catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    expected = {
+        "User": "Usuario",
+        "Agent": "Agente",
+        "Admin": "Administrador",
+        "user": "usuario",
+        "agent": "agente",
+        "admin": "administrador",
+    }
+    wrong = {key: catalog.get(key) for key, value in expected.items() if catalog.get(key) != value}
+    assert not wrong, f"role keys must name the person: {wrong}"
