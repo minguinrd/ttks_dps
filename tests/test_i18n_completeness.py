@@ -85,12 +85,23 @@ def test_confirm_dialog_chrome_translates(app, client, user_factory, login):
     assert 'data-confirm-yes="Sí"' in html
     assert 'data-confirm-cancel="Cancelar"' in html
 
-    # English pages stay byte-identical: plain lang="en", English chrome.
+    # Anonymous readers get the default locale (Spanish) — no stored
+    # preference exists yet.
     anon_html = app.test_client().get("/auth/login").get_data(as_text=True)
-    assert '<html lang="en">' in anon_html
-    assert 'data-confirm-title="Are you sure?"' in anon_html
-    assert 'data-confirm-yes="Yes"' in anon_html
-    assert 'data-confirm-cancel="Cancel"' in anon_html
+    assert '<html lang="es">' in anon_html
+    assert 'data-confirm-title="¿Estás seguro?"' in anon_html
+    assert 'data-confirm-yes="Sí"' in anon_html
+    assert 'data-confirm-cancel="Cancelar"' in anon_html
+
+    # An explicit English choice keeps byte-identical English chrome.
+    client.post("/auth/logout")
+    en_user = user_factory(username="en-confirm", language="en")
+    login(client, en_user)
+    en_html = client.get("/notifications").get_data(as_text=True)
+    assert '<html lang="en">' in en_html
+    assert 'data-confirm-title="Are you sure?"' in en_html
+    assert 'data-confirm-yes="Yes"' in en_html
+    assert 'data-confirm-cancel="Cancel"' in en_html
 
 
 def test_role_labels_translate_correctly():

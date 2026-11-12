@@ -8,10 +8,11 @@ from app import create_app
 from app.extensions import db
 from app.models import Notification, User
 
-PENDING_MESSAGE = "Your account is awaiting admin approval."
-SUSPENDED_MESSAGE = "This account has been suspended. Contact the administrator."
+PENDING_MESSAGE = "Tu cuenta está pendiente de aprobación del administrador."
+SUSPENDED_MESSAGE = "Esta cuenta ha sido suspendida. Contacta con el administrador."
 GOOGLE_FAILURE_MESSAGE = (
-    "Google sign-in failed. Please try again or use your username and password."
+    "No se pudo iniciar sesión con Google. Inténtalo de nuevo o usa tu "
+    "nombre de usuario y contraseña."
 )
 
 
@@ -67,7 +68,7 @@ def test_google_button_shown_with_config(google_app):
     resp = client.get("/auth/login")
 
     html = resp.get_data(as_text=True)
-    assert "Sign in with Google" in html
+    assert "Iniciar sesión con Google" in html
     assert "/auth/google" in html
 
 

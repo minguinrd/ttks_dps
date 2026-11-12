@@ -151,7 +151,7 @@ def test_suspend_and_reactivate(app, client, user_factory, login):
     resp = client.post("/auth/login", data={"username": "admin-victim", "password": "pass12345"})
 
     assert resp.status_code == 200
-    assert "This account has been suspended." in resp.get_data(as_text=True)
+    assert "Esta cuenta ha sido suspendida." in resp.get_data(as_text=True)
 
     login(client, admin)
     resp = client.post(f"/admin/users/{victim.id}/reactivate")

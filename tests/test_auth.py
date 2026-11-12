@@ -31,7 +31,9 @@ def test_pending_user_cannot_login(client, user_factory):
     resp = client.post("/auth/login", data={"username": "pendy", "password": "pass12345"})
 
     assert resp.status_code == 200
-    assert "Your account is awaiting admin approval." in resp.get_data(as_text=True)
+    assert "Tu cuenta está pendiente de aprobación del administrador." in resp.get_data(
+        as_text=True
+    )
     with client.session_transaction() as sess:
         assert "_user_id" not in sess
 
@@ -42,7 +44,7 @@ def test_suspended_login_refused(client, user_factory):
     resp = client.post("/auth/login", data={"username": "susy", "password": "pass12345"})
 
     assert resp.status_code == 200
-    assert "This account has been suspended. Contact the administrator." in resp.get_data(
+    assert "Esta cuenta ha sido suspendida. Contacta con el administrador." in resp.get_data(
         as_text=True
     )
     with client.session_transaction() as sess:
@@ -72,7 +74,7 @@ def test_wrong_password_rejected(client, user_factory):
     resp = client.post("/auth/login", data={"username": "active-amy", "password": "wrong-pass"})
 
     assert resp.status_code == 200
-    assert "Invalid username or password." in resp.get_data(as_text=True)
+    assert "Usuario o contraseña no válidos." in resp.get_data(as_text=True)
     with client.session_transaction() as sess:
         assert "_user_id" not in sess
 
@@ -93,7 +95,7 @@ def test_duplicate_username_rejected(client, app, user_factory):
     )
 
     assert resp.status_code == 200
-    assert "Username already taken." in resp.get_data(as_text=True)
+    assert "El nombre de usuario ya está en uso." in resp.get_data(as_text=True)
     with app.app_context():
         rows = db.session.scalars(db.select(User).filter_by(username="dup")).all()
         assert len(rows) == 1

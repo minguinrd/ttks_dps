@@ -4,7 +4,6 @@ import re
 
 from flask import g
 
-from app import i18n
 from app.extensions import db
 from app.i18n import translate
 from app.models import User
@@ -39,16 +38,23 @@ def test_language_save_switches_locale(app, client, user_factory, login):
     assert not re.search(r"<h1[^>]*>Profile</h1>", html)
 
 
-def test_anonymous_pages_stay_english(client, monkeypatch):
-    # Even with a Spanish catalog entry for "Sign in", anonymous requests stay
-    # English: locale comes from the user row, never from the browser.
-    monkeypatch.setitem(i18n._catalog_cache, "es", {"Sign in": "Iniciar sesión"})
-
+def test_anonymous_pages_default_to_spanish(client):
+    # Spanish is the default locale: anonymous requests carry no stored
+    # preference yet, so they render the catalog translation. Locale still
+    # never comes from the browser.
     resp = client.get("/auth/login")
 
     html = resp.get_data(as_text=True)
-    assert "Sign in" in html
-    assert "Iniciar sesión" not in html
+    assert '<html lang="es">' in html
+    assert "Iniciar sesión" in html
+    assert "Sign in" not in html
+
+
+def test_outside_app_context_stays_english():
+    # Import-time key marking (module-level constants such as
+    # FORCED_PASSWORD_CHANGE_MESSAGE) runs with no request locale: it must
+    # stay English source so translation happens per request, not at import.
+    assert translate("Sign in") == "Sign in"
 
 
 def test_invalid_language_value_rejected(app, client, user_factory, login):

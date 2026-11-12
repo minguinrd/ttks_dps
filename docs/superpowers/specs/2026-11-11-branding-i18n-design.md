@@ -25,8 +25,10 @@ language, and get a *fully* translated UI, not a half-translated one.
   category / priority / role badges, enum choice lists, and notifications.
 - **Everything visible is translatable:** admin pages included. User-generated
   content (ticket subjects, comments, descriptions, names) is never translated.
-- Anonymous pages (login, register, pending) display in English — no stored
-  preference exists yet; browser-language detection is out of scope.
+- Anonymous pages (login, register, pending) display in the default locale —
+  Spanish since `2026-11-12-spanish-default-design.md`, which supersedes the
+  original English default. No stored preference exists yet;
+  browser-language detection is out of scope.
 
 ## Non-goals / anti-goals
 

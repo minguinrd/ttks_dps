@@ -37,7 +37,6 @@ def create_app(config: dict | None = None) -> Flask:
 
     db.init_app(app)
     migrate.init_app(app, db)
-    csrf.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
     oauth.init_app(app)
@@ -92,14 +91,20 @@ def create_app(config: dict | None = None) -> Flask:
     @app.before_request
     def set_request_locale():
         # Display language for this request (app.i18n reads g.locale). Anonymous
-        # users always get English — no browser detection. Static files skip the
-        # work entirely; nothing template-rendered ever runs for them.
+        # users get the default locale — no browser detection. Static files skip
+        # the work entirely; nothing template-rendered ever runs for them.
         if request.endpoint == "static":
             return
         if current_user.is_authenticated and current_user.language in SUPPORTED:
             g.locale = current_user.language
         else:
-            g.locale = "en"
+            g.locale = "es"
+
+    # CSRF must be initialised AFTER the locale hook: Flask runs before_request
+    # hooks in registration order, and CSRF rejects oversized bodies (413) while
+    # parsing the form — before later hooks run. Registering it here keeps
+    # g.locale set for the 413 error handler's translated messages.
+    csrf.init_app(app)
 
     @app.before_request
     def force_password_change():

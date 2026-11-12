@@ -6,7 +6,7 @@ byte-identical whether or not a key exists in a catalog.
 
 Locale is resolved per request (``g.locale``, set by the ``before_request``
 hook in :func:`app.create_app`) — never baked at import time. Anonymous
-users always get ``en``; there is no browser detection.
+users get the default locale, ``es``; there is no browser detection.
 
 On a lookup miss (and without params) catalog keys containing
 ``{placeholders}`` are matched as patterns against the concrete message and
@@ -41,13 +41,13 @@ def _load_catalog(locale: str) -> dict[str, str]:
 
 
 def get_locale() -> str:
-    """Locale for the current request (``"en"`` when none was set).
+    """Locale for the current request (``"es"`` when none was set).
 
     Also returns ``"en"`` outside an application context, so import-time key
     marking (e.g. form labels) stays plain English source.
     """
     try:
-        return getattr(g, "locale", "en")
+        return getattr(g, "locale", "es")
     except RuntimeError:  # pragma: no cover - only hit outside an app context
         return "en"
 
