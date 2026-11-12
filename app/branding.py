@@ -14,14 +14,26 @@ DEFAULTS: dict[str, str] = {
 }
 
 
+def _is_missing_settings_table(exc: OperationalError) -> bool:
+    """True only for SQLite's ``no such table: settings`` (un-migrated DB).
+
+    Loose match (case/whitespace/quote tolerant) so driver wording drift still
+    hits; anything else — locks, I/O errors — must propagate.
+    """
+    message = re.sub(r"\s+", " ", str(exc)).lower()
+    return re.search(r"no such table[:\s]*\"?'?settings\b", message) is not None
+
+
 def get_setting(key: str) -> str | None:
     try:
         row = db.session.get(Setting, key)
-    except OperationalError:
+    except OperationalError as exc:
+        db.session.rollback()
+        if not _is_missing_settings_table(exc):
+            raise
         # Un-migrated database (app booted before ``db upgrade``): treat every
         # setting as unset so branding falls back to defaults instead of
         # breaking every page render. Writes stay strict (see ``set_setting``).
-        db.session.rollback()
         return None
     return row.value if row else None
 
