@@ -11,6 +11,8 @@ services:
       # Optional Google sign-in; empty defaults keep the feature off.
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      BACKUP_HOUR: ${BACKUP_HOUR:-03:00}
+      BACKUP_KEEP: ${BACKUP_KEEP:-7}
     volumes:
       - ttks_data:/data
     restart: unless-stopped

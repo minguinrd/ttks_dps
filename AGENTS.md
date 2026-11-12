@@ -10,6 +10,7 @@ Lint/format: ruff. Python 3.11+ syntax is fine (ruff `target-version = "py311"`)
 
 - `.venv/bin/flask --app wsgi db upgrade` — apply migrations
 - `.venv/bin/flask --app wsgi seed-admin` — idempotent; needs `ADMIN_USERNAME` + `ADMIN_PASSWORD` in the environment
+- `.venv/bin/flask --app wsgi restore-backup <path>` — swap a backup in (integrity check, safety copy, WAL cleanup); stop the service first
 - `.venv/bin/flask --app wsgi run` — dev server
 - `.venv/bin/pytest -q`
 - `.venv/bin/ruff check .` and `.venv/bin/ruff format --check .`
@@ -27,9 +28,10 @@ models in `app/models/` (user, ticket, notification), Alembic migrations in
 - `app/extensions.py` installs a SQLite connect listener: WAL journal +
   `foreign_keys=ON` on every connection.
 - Env vars (see `.env.example`): `FLASK_APP`, `SECRET_KEY`, `DATA_DIR`,
-  `ADMIN_USERNAME`, `ADMIN_PASSWORD`, plus optional `GOOGLE_CLIENT_ID` /
-  `GOOGLE_CLIENT_SECRET` (both set gates the Google login button and
-  `/auth/google` routes). `flask seed-admin` errors without the
+  `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `BACKUP_HOUR` / `BACKUP_KEEP` (daily
+  SQLite backup schedule; defaults `03:00` / `7`), plus optional
+  `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (both set gates the Google
+  login button and `/auth/google` routes). `flask seed-admin` errors without the
   `ADMIN_*` pair; `flask` CLI does not load `.env` unless python-dotenv is
   installed (export the vars or use `--app`).
 - Frontend assets come from CDNs (Bootstrap 5 + SweetAlert2 in

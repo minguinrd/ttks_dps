@@ -10,7 +10,7 @@ from app import (
 )
 from app.admin import admin_bp
 from app.auth import auth_bp
-from app.cli import seed_admin
+from app.cli import restore_backup, seed_admin
 from app.config import Config
 from app.extensions import csrf, db, login_manager, migrate, oauth
 from app.main import main_bp
@@ -62,6 +62,7 @@ def create_app(config: dict | None = None) -> Flask:
         backup.start_scheduler(app)
 
     app.cli.add_command(seed_admin)
+    app.cli.add_command(restore_backup)
 
     @app.context_processor
     def inject_notification_helpers():
