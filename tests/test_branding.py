@@ -1,11 +1,12 @@
 """Branding settings: site name, accent color, and logo state."""
 
 import re
+from io import BytesIO
 
 import pytest
 from sqlalchemy.exc import OperationalError
 
-from app.branding import get_branding, set_setting
+from app.branding import get_branding, get_setting, set_setting
 from app.extensions import db
 
 
@@ -116,3 +117,141 @@ def test_active_nav_link_rule_present(app, db_schema, client):
     assert re.search(
         r"\.navbar\s+\.navbar-nav\s+\.nav-link\.active\s*\{[^}]*var\(--brand-accent\)", html
     )
+
+
+def test_branding_requires_admin(app, db_schema, client, user_factory, login):
+    user = user_factory(role="user")
+    login(client, user)
+
+    assert client.get("/admin/branding").status_code == 403
+    assert client.post("/admin/branding", data={"site_name": "X"}).status_code == 403
+    # The nav link is gated to admins, like Admin and Backup.
+    assert 'href="/admin/branding"' not in client.get("/auth/login").get_data(as_text=True)
+
+    anon = app.test_client()
+    for resp in (
+        anon.get("/admin/branding"),
+        anon.post("/admin/branding", data={"site_name": "X"}),
+    ):
+        assert resp.status_code == 302
+        assert resp.headers["Location"].startswith("/auth/login")
+    assert 'href="/admin/branding"' not in anon.get("/auth/login").get_data(as_text=True)
+
+
+def test_branding_save_updates_site_name_and_color(app, db_schema, client, user_factory, login):
+    admin = user_factory(role="admin")
+    login(client, admin)
+    client.get("/admin/branding")  # fetch the form first (carries the CSRF token in production)
+
+    resp = client.post("/admin/branding", data={"site_name": "Acme IT", "accent_color": "#123456"})
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/admin/branding"
+    with app.app_context():
+        assert get_setting("site_name") == "Acme IT"
+        assert get_setting("accent_color") == "#123456"
+    html = client.get("/admin/branding").get_data(as_text=True)
+    assert "Branding updated." in html
+    assert 'value="Acme IT"' in html
+    assert 'value="#123456"' in html
+    assert 'href="/admin/branding"' in html
+
+
+def test_branding_invalid_color_rejected(app, db_schema, client, user_factory, login):
+    admin = user_factory(role="admin")
+    login(client, admin)
+    with app.app_context():
+        set_setting("site_name", "Original")
+        set_setting("accent_color", "#222222")
+    client.get("/admin/branding")
+
+    resp = client.post("/admin/branding", data={"site_name": "Changed", "accent_color": "red"})
+
+    assert resp.status_code == 200
+    assert "Use a hex color like #123456." in resp.get_data(as_text=True)
+    with app.app_context():
+        assert get_setting("site_name") == "Original"
+        assert get_setting("accent_color") == "#222222"
+
+
+def test_logo_upload_served_publicly(app, db_schema, client, user_factory, login, tmp_path):
+    app.config["DATA_DIR"] = str(tmp_path)  # branding files land in a per-test dir
+    admin = user_factory(role="admin")
+    login(client, admin)
+    png = b"\x89PNG\r\n\x1a\n" + b"0" * 64
+    client.get("/admin/branding")
+
+    resp = client.post(
+        "/admin/branding",
+        data={
+            "site_name": "Acme IT",
+            "accent_color": "#123456",
+            "logo": (BytesIO(png), "logo.png", "image/png"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert resp.status_code == 302
+    with app.app_context():
+        assert get_setting("logo_file") == "logo.png"
+    assert (tmp_path / "branding" / "logo.png").read_bytes() == png
+
+    anon = app.test_client()
+    resp = anon.get("/branding/logo")
+    assert resp.status_code == 200
+    assert resp.headers["Content-Type"].startswith("image/")
+    html = anon.get("/auth/login").get_data(as_text=True)
+    assert '<img src="/branding/logo"' in html
+
+
+def test_logo_upload_rejects_bad_type(app, db_schema, client, user_factory, login, tmp_path):
+    app.config["DATA_DIR"] = str(tmp_path)
+    admin = user_factory(role="admin")
+    login(client, admin)
+    client.get("/admin/branding")
+    too_big = b"\x89PNG\r\n\x1a\n" + b"x" * (2 * 1024 * 1024 + 1)
+    cases = [
+        ((BytesIO(b"\x89PNG\r\n\x1a\n"), "evil.php", "image/png"), "Unsupported image type"),
+        ((BytesIO(b"\x89PNG\r\n\x1a\n"), "../../evil.php", "image/png"), "Unsupported image type"),
+        ((BytesIO(too_big), "big.png", "image/png"), "File too large"),
+    ]
+    for upload, error in cases:
+        resp = client.post(
+            "/admin/branding",
+            data={"site_name": "Acme IT", "accent_color": "#123456", "logo": upload},
+            content_type="multipart/form-data",
+        )
+        assert resp.status_code == 200
+        assert error in resp.get_data(as_text=True)
+        branding_dir = tmp_path / "branding"
+        assert not branding_dir.exists() or list(branding_dir.iterdir()) == []
+        with app.app_context():
+            assert get_setting("logo_file") is None
+
+
+def test_logo_remove_reverts_to_text_brand(app, db_schema, client, user_factory, login, tmp_path):
+    app.config["DATA_DIR"] = str(tmp_path)
+    admin = user_factory(role="admin")
+    login(client, admin)
+    png = b"\x89PNG\r\n\x1a\n" + b"0" * 64
+    client.post(
+        "/admin/branding",
+        data={
+            "site_name": "Acme IT",
+            "accent_color": "#123456",
+            "logo": (BytesIO(png), "logo.png", "image/png"),
+        },
+        content_type="multipart/form-data",
+    )
+    logo_path = tmp_path / "branding" / "logo.png"
+    assert logo_path.exists()
+
+    resp = client.post("/admin/branding/logo/delete")
+
+    assert resp.status_code == 302
+    assert not logo_path.exists()
+    with app.app_context():
+        assert get_setting("logo_file") is None
+        assert get_branding()["has_logo"] is False
+    html = app.test_client().get("/auth/login").get_data(as_text=True)
+    assert re.search(r'<a class="navbar-brand"[^>]*>\s*Acme IT\s*</a\s*>', html)

@@ -8,7 +8,9 @@ SQLite database, in-app notifications only — no email is ever sent.
 
 - **user** — open tickets, track and comment on their own tickets
 - **agent** — work the queue: claim, release, resolve and reopen tickets
-- **admin** — agent powers plus assigning tickets and managing users/departments
+- **admin** — agent powers plus assigning tickets and managing users/departments;
+  admins also set the site name, logo, and accent color at **Admin → Branding**
+  (logo uploads are stored in `DATA_DIR/branding/`)
 
 ## Local development
 

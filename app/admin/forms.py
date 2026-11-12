@@ -1,9 +1,24 @@
+from pathlib import Path
+
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField
+from werkzeug.utils import secure_filename
 from wtforms import PasswordField, SelectChoice, SelectField, StringField, SubmitField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional, ValidationError
+from wtforms.validators import (
+    DataRequired,
+    Email,
+    EqualTo,
+    Length,
+    Optional,
+    Regexp,
+    ValidationError,
+)
 
 from app.extensions import db
 from app.models import Department, Role, User
+
+LOGO_EXTENSIONS = {".png", ".jpg", ".jpeg", ".svg"}
+LOGO_TOO_LARGE_ERROR = "File too large (max 2 MB)."
 
 
 class AdminUserForm(FlaskForm):
@@ -84,3 +99,28 @@ class DepartmentForm(FlaskForm):
         if self.edit_department is not None and existing.id == self.edit_department.id:
             return
         raise ValidationError("Department name already taken.")
+
+
+class BrandingForm(FlaskForm):
+    """Deploy-wide branding: site name, accent color, and an optional logo."""
+
+    site_name = StringField("Site name", validators=[DataRequired(), Length(max=100)])
+    accent_color = StringField(
+        "Accent color",
+        validators=[Regexp(r"^#[0-9a-fA-F]{6}$", message="Use a hex color like #123456.")],
+    )
+    logo = FileField("Logo")
+    submit = SubmitField("Save")
+
+    def validate_logo(self, field):
+        # Optional: nothing to check unless a file was submitted.
+        if not field.data or not field.data.filename:
+            return
+        ext = Path(secure_filename(field.data.filename)).suffix.lower()
+        if ext not in LOGO_EXTENSIONS:
+            raise ValidationError("Unsupported image type. Use PNG, JPG, JPEG or SVG.")
+        # Peek at the size, then rewind so the route can save the whole file.
+        size = field.data.content_length or len(field.data.read())
+        field.data.stream.seek(0)
+        if size > 2 * 1024 * 1024:
+            raise ValidationError(LOGO_TOO_LARGE_ERROR)

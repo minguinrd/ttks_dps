@@ -4,12 +4,21 @@ from pathlib import Path
 
 from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
+from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.utils import secure_filename
 
 from app.admin import admin_bp
-from app.admin.forms import AdminUserForm, DepartmentForm, ResetPasswordForm
+from app.admin.forms import (
+    LOGO_TOO_LARGE_ERROR,
+    AdminUserForm,
+    BrandingForm,
+    DepartmentForm,
+    ResetPasswordForm,
+)
 from app.backup import run_backup_cycle
+from app.branding import get_branding, get_setting, set_setting
 from app.extensions import db
-from app.models import Category, Department, Priority, Role, Ticket, TicketStatus, User
+from app.models import Category, Department, Priority, Role, Setting, Ticket, TicketStatus, User
 from app.permissions import role_required
 
 
@@ -242,6 +251,45 @@ def department_edit(department_id):
     return render_template("admin/department_edit.html", form=form, department=department)
 
 
+@admin_bp.route("/branding", methods=["GET", "POST"])
+@login_required
+@role_required("admin")
+def branding():
+    try:
+        form = BrandingForm()
+        validated = form.validate_on_submit()
+    except RequestEntityTooLarge:
+        # The body is rejected while the form is parsed — before validators can
+        # run — so turn it into the same inline error the size validator raises.
+        form = BrandingForm(formdata=None)
+        form.logo.errors = [LOGO_TOO_LARGE_ERROR]
+        _prefill_branding_form(form)
+        return render_template("admin/branding.html", form=form)
+    if validated:
+        set_setting("site_name", form.site_name.data)
+        set_setting("accent_color", form.accent_color.data)
+        if form.logo.data and form.logo.data.filename:
+            _store_logo(form.logo.data)
+        flash("Branding updated.", "success")
+        return redirect(url_for("admin.branding"))
+    if not form.is_submitted():
+        _prefill_branding_form(form)
+    return render_template("admin/branding.html", form=form)
+
+
+@admin_bp.route("/branding/logo/delete", methods=["POST"])
+@login_required
+@role_required("admin")
+def branding_logo_delete():
+    _unlink_logo(get_setting("logo_file"))
+    row = db.session.get(Setting, "logo_file")
+    if row is not None:
+        db.session.delete(row)
+        db.session.commit()
+    flash("Logo removed.", "success")
+    return redirect(url_for("admin.branding"))
+
+
 @admin_bp.route("/backup")
 @login_required
 @role_required("admin")
@@ -310,3 +358,37 @@ def _prefill_user_form(form: AdminUserForm, user: User) -> None:
     form.email.data = user.email
     form.role.data = user.role
     form.department.data = str(user.department_id) if user.department_id else ""
+
+
+def _prefill_branding_form(form: BrandingForm) -> None:
+    """Fill the form from the current settings (only when rendering, never after a POST)."""
+    branding = get_branding()
+    form.site_name.data = branding["site_name"]
+    form.accent_color.data = branding["accent_color"]
+
+
+def _branding_dir() -> Path:
+    return Path(current_app.config["DATA_DIR"]) / "branding"
+
+
+def _unlink_logo(name: str | None) -> None:
+    """Unlink a stored logo file; nothing outside the branding dir is ever touched."""
+    if not name or Path(name).name != name:
+        return
+    (_branding_dir() / name).unlink(missing_ok=True)
+
+
+def _store_logo(file) -> None:
+    """Store the upload as ``logo{ext}`` per the upload rule, replacing any old logo.
+
+    Only called once the form (and its logo validation) has fully passed.
+    """
+    branding_dir = _branding_dir()
+    branding_dir.mkdir(parents=True, exist_ok=True)
+    ext = Path(secure_filename(file.filename)).suffix.lower()
+    stored = f"logo{ext}"
+    old_name = get_setting("logo_file")
+    file.save(branding_dir / stored)
+    if old_name != stored:
+        _unlink_logo(old_name)
+    set_setting("logo_file", stored)

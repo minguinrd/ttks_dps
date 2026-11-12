@@ -1,0 +1,39 @@
+{% extends "base.html" %} {% block title %}Branding{% endblock %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <h1 class="h4 mb-3">Branding</h1>
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="mb-3">
+        {{ form.site_name.label(class_="form-label") }} {{
+        form.site_name(class_="form-control" + (" is-invalid" if form.site_name.errors else "")) }}
+        {% for error in form.site_name.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <div class="mb-3">
+        {{ form.accent_color.label(class_="form-label") }} {{
+        form.accent_color(class_="form-control" + (" is-invalid" if form.accent_color.errors else
+        "")) }} {% for error in form.accent_color.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <div class="mb-3">
+        {{ form.logo.label(class_="form-label") }} {{
+        form.logo(class_="form-control" + (" is-invalid" if form.logo.errors else "")) }} {% for
+        error in form.logo.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {{ form.submit(class_="btn btn-primary") }}
+      <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">Cancel</a>
+    </form>
+    {% if branding.has_logo %}
+    <form method="post" action="{{ url_for('admin.branding_logo_delete') }}" class="mt-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="btn btn-outline-danger" type="submit">Remove logo</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

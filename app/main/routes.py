@@ -1,13 +1,30 @@
 from pathlib import Path
 from uuid import uuid4
 
-from flask import abort, current_app, flash, redirect, render_template, send_from_directory, url_for
+from flask import (
+    abort,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    send_file,
+    send_from_directory,
+    url_for,
+)
 from flask_login import current_user, login_required
 
+from app.branding import get_setting
 from app.extensions import db
 from app.main import main_bp
 from app.main.forms import AVATAR_TOO_LARGE_ERROR, AvatarForm, ChangePasswordForm, ProfileForm
 from app.models import Notification, Role, User
+
+LOGO_MIME_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".svg": "image/svg+xml",
+}
 
 
 @main_bp.route("/")
@@ -110,6 +127,22 @@ def serve_avatar(user_id):
     if user is None or not user.avatar_path:
         abort(404)
     return send_from_directory(current_app.config["AVATAR_DIR"], user.avatar_path)
+
+
+@main_bp.route("/branding/logo")
+def branding_logo():
+    """Serve the deployed site logo; public, 404 until a logo is uploaded."""
+    name = get_setting("logo_file")
+    if not name or Path(name).name != name:
+        # A missing or hostile ``logo_file`` row is treated as "no logo".
+        abort(404)
+    mimetype = LOGO_MIME_TYPES.get(Path(name).suffix.lower())
+    if mimetype is None:
+        abort(404)
+    path = Path(current_app.config["DATA_DIR"]) / "branding" / name
+    if not path.is_file():
+        abort(404)
+    return send_file(path, mimetype=mimetype)
 
 
 def _render_profile(avatar_form):
