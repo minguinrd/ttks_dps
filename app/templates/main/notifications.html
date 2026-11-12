@@ -10,6 +10,7 @@
 <div class="card shadow-sm">
   <ul class="list-group list-group-flush">
     {% for notification in notifications %}
+    {% set text = _(notification.message_key).format(**notification.parsed_params) if notification.message_key else notification.message %}
     <li class="list-group-item d-flex justify-content-between align-items-center">
       <form
         method="post"
@@ -18,8 +19,8 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <button class="btn btn-link p-0 text-start" type="submit">
           {% if not notification.is_read %}
-          <strong>{{ notification.message }}</strong>
-          {% else %}{{ notification.message }}{% endif %}
+          <strong>{{ text }}</strong>
+          {% else %}{{ text }}{% endif %}
         </button>
       </form>
       <span class="text-muted small"

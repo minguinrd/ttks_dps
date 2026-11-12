@@ -101,12 +101,14 @@ def comment(ticket_id):
         )
         # Internal notes are for agents only: they never notify anyone.
         if not is_internal:
+            # The actor never pings themselves.
             notify(
-                _comment_recipients(ticket),
+                [user_id for user_id in _comment_recipients(ticket) if user_id != current_user.id],
                 f"New comment on ticket #{ticket.id}.",
                 url_for("tickets.detail", ticket_id=ticket.id),
-                ticket=ticket,
-                exclude_id=current_user.id,
+                ticket_id=ticket.id,
+                key="New comment on ticket #{ticket_id}.",
+                params={"ticket_id": ticket.id},
             )
         db.session.commit()
         flash("Comment posted.", "success")
@@ -149,7 +151,9 @@ def claim(ticket_id):
         [ticket.assignee.id],
         f"Ticket #{ticket.id} has been assigned to you.",
         url_for("tickets.detail", ticket_id=ticket.id),
-        ticket=ticket,
+        ticket_id=ticket.id,
+        key="Ticket #{ticket_id} has been assigned to you.",
+        params={"ticket_id": ticket.id},
     )
     db.session.commit()
     flash("Ticket claimed.", "success")
@@ -197,7 +201,9 @@ def assign(ticket_id):
         [agent.id],
         f"Ticket #{ticket.id} has been assigned to you.",
         url_for("tickets.detail", ticket_id=ticket.id),
-        ticket=ticket,
+        ticket_id=ticket.id,
+        key="Ticket #{ticket_id} has been assigned to you.",
+        params={"ticket_id": ticket.id},
     )
     db.session.commit()
     flash("Ticket assigned.", "success")
@@ -222,7 +228,9 @@ def resolve(ticket_id):
         [ticket.requester_id],
         f"Ticket #{ticket.id} has been resolved.",
         url_for("tickets.detail", ticket_id=ticket.id),
-        ticket=ticket,
+        ticket_id=ticket.id,
+        key="Ticket #{ticket_id} has been resolved.",
+        params={"ticket_id": ticket.id},
     )
     db.session.commit()
     flash("Ticket resolved.", "success")
@@ -253,7 +261,9 @@ def reopen(ticket_id):
         reopen_recipient_ids,
         f"Ticket #{ticket.id} has been reopened.",
         url_for("tickets.detail", ticket_id=ticket.id),
-        ticket=ticket,
+        ticket_id=ticket.id,
+        key="Ticket #{ticket_id} has been reopened.",
+        params={"ticket_id": ticket.id},
     )
     db.session.commit()
     flash("Ticket reopened.", "success")
@@ -276,7 +286,9 @@ def close(ticket_id):
         [ticket.requester_id],
         f"Ticket #{ticket.id} has been closed.",
         url_for("tickets.detail", ticket_id=ticket.id),
-        ticket=ticket,
+        ticket_id=ticket.id,
+        key="Ticket #{ticket_id} has been closed.",
+        params={"ticket_id": ticket.id},
     )
     db.session.commit()
     flash("Ticket closed.", "success")

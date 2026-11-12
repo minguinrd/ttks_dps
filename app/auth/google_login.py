@@ -63,6 +63,8 @@ def find_or_create_google_user(email: str, *, sub: str, name: str | None) -> tup
         admin_ids,
         f"New user {user.username} registered via Google.",
         "/admin/",
+        key="New user {username} registered via Google.",
+        params={"username": user.username},
     )
     db.session.commit()
     return user, True

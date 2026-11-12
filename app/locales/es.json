@@ -7,5 +7,12 @@
   "Profile picture": "Foto de perfil",
   "Avatar": "Avatar",
   "Upload": "Subir",
-  "Language": "Idioma"
+  "Language": "Idioma",
+  "New comment on ticket #{ticket_id}.": "Nuevo comentario en el ticket #{ticket_id}.",
+  "Ticket #{ticket_id} has been assigned to you.": "El ticket #{ticket_id} te ha sido asignado.",
+  "Ticket #{ticket_id} has been resolved.": "El ticket #{ticket_id} ha sido resuelto.",
+  "Ticket #{ticket_id} has been reopened.": "El ticket #{ticket_id} ha sido reabierto.",
+  "Ticket #{ticket_id} has been closed.": "El ticket #{ticket_id} ha sido cerrado.",
+  "New user {username} is awaiting approval.": "El nuevo usuario {username} está pendiente de aprobación.",
+  "New user {username} registered via Google.": "El nuevo usuario {username} se registró mediante Google."
 }

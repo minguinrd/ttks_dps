@@ -50,6 +50,8 @@ def register():
             admin_ids,
             f"New user {user.username} is awaiting approval.",
             "/admin/",
+            key="New user {username} is awaiting approval.",
+            params={"username": user.username},
         )
         db.session.commit()
         return redirect(url_for("auth.pending"))
