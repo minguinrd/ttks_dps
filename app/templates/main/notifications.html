@@ -10,7 +10,8 @@
 <div class="card shadow-sm">
   <ul class="list-group list-group-flush">
     {% for notification in notifications %}
-    {% set text = _(notification.message_key).format(**notification.parsed_params) if notification.message_key else notification.message %}
+    {% set params = notification.parsed_params %}
+    {% set text = _(notification.message_key, **params) if notification.message_key and params else notification.message %}
     <li class="list-group-item d-flex justify-content-between align-items-center">
       <form
         method="post"

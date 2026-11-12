@@ -22,5 +22,12 @@ class Notification(db.Model):
 
     @property
     def parsed_params(self) -> dict:
-        """``params`` JSON decoded for rendering (``{}`` when unset)."""
-        return json.loads(self.params) if self.params else {}
+        """``params`` JSON decoded for rendering (``{}`` when unset or corrupt).
+
+        A single bad row must never crash the notifications page.
+        """
+        try:
+            params = json.loads(self.params) if self.params else {}
+        except ValueError:  # includes json.JSONDecodeError
+            return {}
+        return params if isinstance(params, dict) else {}

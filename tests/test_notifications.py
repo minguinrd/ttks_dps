@@ -2,6 +2,30 @@ from app.extensions import db
 from app.models import Notification
 
 
+def test_corrupt_notification_params_do_not_break_page(app, client, user_factory, login):
+    # A single bad row (params that are not valid JSON) must not 500 the
+    # notifications page: parsing degrades to {} and the row falls back to
+    # the stored message.
+    user = user_factory(username="notify-corrupt")
+    with app.app_context():
+        db.session.add(
+            Notification(
+                user_id=user.id,
+                message="Ticket #7 has been closed.",
+                message_key="Ticket #{ticket_id} has been closed.",
+                params="{not json",
+                url="/tickets/7",
+            )
+        )
+        db.session.commit()
+    login(client, user)
+
+    resp = client.get("/notifications")
+
+    assert resp.status_code == 200
+    assert "Ticket #7 has been closed." in resp.get_data(as_text=True)
+
+
 def test_claim_notifies_assignee(app, client, user_factory, login, ticket_factory):
     owner = user_factory(username="notify-claim-owner")
     agent = user_factory(username="notify-claim-agent", role="agent")

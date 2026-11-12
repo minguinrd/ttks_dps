@@ -71,6 +71,28 @@ def test_spanish_user_sees_spanish_queue(app, client, user_factory, login):
     assert not re.search(r"<h1[^>]*>Ticket Queue</h1>", html)
 
 
+def test_confirm_dialog_chrome_translates(app, client, user_factory, login):
+    # SweetAlert2's modal chrome (title, confirm/cancel buttons) must follow
+    # the reader's language too: the shared data-confirm handler reads these
+    # data attributes off <body> (app/static/js/app.js), with English fallbacks.
+    user = user_factory(username="es-confirm", language="es")
+    login(client, user)
+
+    html = client.get("/notifications").get_data(as_text=True)
+
+    assert '<html lang="es">' in html
+    assert 'data-confirm-title="¿Estás seguro?"' in html
+    assert 'data-confirm-yes="Sí"' in html
+    assert 'data-confirm-cancel="Cancelar"' in html
+
+    # English pages stay byte-identical: plain lang="en", English chrome.
+    anon_html = app.test_client().get("/auth/login").get_data(as_text=True)
+    assert '<html lang="en">' in anon_html
+    assert 'data-confirm-title="Are you sure?"' in anon_html
+    assert 'data-confirm-yes="Yes"' in anon_html
+    assert 'data-confirm-cancel="Cancel"' in anon_html
+
+
 def test_role_labels_translate_correctly():
     # Role words name the *person*, not the administrative function: a user
     # with role="admin" is an "Administrador", never "Administración".

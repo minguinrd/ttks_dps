@@ -2,7 +2,7 @@ import os
 
 from flask import Flask, flash, g, redirect, request, url_for
 from flask_login import current_user
-from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.exceptions import Forbidden, RequestEntityTooLarge
 
 from app import (
     backup,
@@ -126,6 +126,13 @@ def create_app(config: dict | None = None) -> Flask:
         if request.endpoint == "main.avatar_upload":
             return avatar_upload_error_response()
         if request.endpoint == "admin.branding":
+            # The route's @role_required never runs (CSRF rejects the body in
+            # before_request first), so the admin gate is reapplied here.
+            # abort() is not an option inside an error handler — exceptions
+            # raised from error handlers surface as 500s — so the 403 response
+            # is returned directly, matching abort(403)'s output.
+            if current_user.role != "admin":
+                return Forbidden().get_response()
             return branding_upload_error_response()
         return error.get_response()
 

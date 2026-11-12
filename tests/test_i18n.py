@@ -67,3 +67,19 @@ def test_missing_catalog_falls_back_to_source(app):
     with app.app_context():
         g.locale = "es"
         assert translate("Untranslated sentinél") == "Untranslated sentinél"
+
+
+def test_placeholder_pattern_translation(app):
+    # Validator errors arrive as concrete messages; catalog keys keep {min}/
+    # {max} slots and app.i18n matches the concrete text against them (the
+    # macros/forms.html error rendering path).
+    with app.app_context():
+        g.locale = "es"
+        # The catalog key keeps its placeholders so callers can format them.
+        template = translate("Field must be between {min} and {max} characters long.")
+        assert template == "El campo debe tener entre {min} y {max} caracteres."
+        assert template.format(min=8, max=128) == "El campo debe tener entre 8 y 128 caracteres."
+        # The concrete message matches the pattern and is re-formatted with
+        # the captured values.
+        concrete = translate("Field must be between 8 and 128 characters long.")
+        assert concrete == "El campo debe tener entre 8 y 128 caracteres."

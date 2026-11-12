@@ -266,9 +266,8 @@ def _csrf_token(html):
     return match.group(1)
 
 
-@pytest.fixture()
-def csrf_admin(tmp_path):
-    """CSRF-enabled app (the production setting) with a logged-in admin.
+def _csrf_session(tmp_path, role):
+    """CSRF-enabled app (the production setting) with a logged-in ``role`` user.
 
     Mirrors ``tests.test_profile``'s ``csrf_app``/``csrf_client`` so the
     oversize-upload path through the app-level 413 handler is exercised for
@@ -287,7 +286,7 @@ def csrf_admin(tmp_path):
     )
     with app.app_context():
         db.create_all()
-        admin = User(username="brand-admin", role="admin", status="active")
+        admin = User(username=f"brand-{role}", role=role, status="active")
         admin.set_password("pass12345")
         db.session.add(admin)
         db.session.commit()
@@ -295,10 +294,20 @@ def csrf_admin(tmp_path):
     token = _csrf_token(client.get("/auth/login").get_data(as_text=True))
     resp = client.post(
         "/auth/login",
-        data={"username": "brand-admin", "password": "pass12345", "csrf_token": token},
+        data={"username": f"brand-{role}", "password": "pass12345", "csrf_token": token},
     )
     assert resp.status_code == 302
     return SimpleNamespace(app=app, client=client, data_dir=tmp_path)
+
+
+@pytest.fixture()
+def csrf_admin(tmp_path):
+    return _csrf_session(tmp_path, "admin")
+
+
+@pytest.fixture()
+def csrf_regular_user(tmp_path):
+    return _csrf_session(tmp_path, "user")
 
 
 def test_logo_oversize_rejected_with_csrf_enabled(csrf_admin):
@@ -332,3 +341,23 @@ def test_logo_oversize_rejected_with_csrf_enabled(csrf_admin):
     with csrf_admin.app.app_context():
         assert get_setting("logo_file") is None
         assert get_setting("site_name") is None
+
+
+def test_branding_oversize_post_rejects_non_admin(csrf_regular_user):
+    # CSRF's before_request rejects the oversized body before the route's
+    # @role_required ever runs, so the app-level 413 handler must apply the
+    # admin gate itself: a non-admin must never see the branding form.
+    token = _csrf_token(csrf_regular_user.client.get("/notifications").get_data(as_text=True))
+    big = b"\x89PNG\r\n\x1a\n" + b"x" * (2 * 1024 * 1024 + 1)
+    resp = csrf_regular_user.client.post(
+        "/admin/branding",
+        data={
+            "csrf_token": token,
+            "site_name": "Acme IT",
+            "accent_color": "#123456",
+            "logo": (BytesIO(big), "big.png", "image/png"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert resp.status_code == 403
