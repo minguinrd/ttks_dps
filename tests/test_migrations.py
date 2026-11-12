@@ -64,16 +64,19 @@ def test_upgrade_with_child_rows(tmp_path):
     assert result.exit_code == 0, result.output
     _seed_child_rows(_db_path(app))
 
-    result = _upgrade(app)  # to head: add google_sub + settings + user language + notification keys
+    # to head: add google_sub + settings + user language + notification keys + spanish default
+    result = _upgrade(app)
     assert result.exit_code == 0, f"{result.output}{result.exception!r}"
 
     conn = sqlite3.connect(_db_path(app))
     cols = [row[1] for row in conn.execute("PRAGMA table_info(users)")]
     assert "google_sub" in cols
     assert conn.execute("SELECT count(*) FROM users").fetchone()[0] == 1
+    alice_row = conn.execute("SELECT language FROM users WHERE username='alice'").fetchone()
+    assert alice_row[0] == "es"
     assert conn.execute("SELECT count(*) FROM tickets").fetchone()[0] == 1
     version = conn.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-    assert version == "7cee1007d919"
+    assert version == "245bf1a60eae"
     conn.close()
 
 

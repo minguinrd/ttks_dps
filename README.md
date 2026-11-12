@@ -14,8 +14,11 @@ SQLite database, in-app notifications only — no email is ever sent.
 
 ## Display language
 
-Each user picks English or Spanish on their profile page (`/profile`); the
-choice applies to every page from the next request on. New user-visible strings
+Spanish is the default: anonymous pages and new accounts render in Spanish,
+and existing accounts were switched over by the `spanish default language`
+migration. Each user picks English or Spanish on their profile page
+(`/profile`); the choice applies to every page from the next request on. New
+user-visible strings
 must be marked with `_()` and added to `app/locales/es.json` — the
 `tests/test_i18n_completeness.py` gate fails the build on any marked string
 missing from the catalog, any stale catalog key, or any computed translation

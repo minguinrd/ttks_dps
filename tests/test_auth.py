@@ -101,6 +101,25 @@ def test_duplicate_username_rejected(client, app, user_factory):
         assert len(rows) == 1
 
 
+def test_new_user_defaults_to_spanish(client, app, db_schema):
+    resp = client.post(
+        "/auth/register",
+        data={
+            "username": "nuevo",
+            "password": "pass12345",
+            "confirm": "pass12345",
+            "full_name": "Nuevo Usuario",
+            "email": "nuevo@example.com",
+            "department": "",
+        },
+    )
+
+    assert resp.status_code == 302
+    with app.app_context():
+        user = db.session.scalar(db.select(User).filter_by(username="nuevo"))
+        assert user.language == "es"
+
+
 def test_suspended_user_loses_existing_session(app, client, user_factory, login):
     victim = user_factory(username="revoke-victim")
     admin = user_factory(username="revoke-admin", role="admin")

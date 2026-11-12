@@ -233,7 +233,7 @@ def test_avatar_oversize_rejected_with_csrf_enabled(csrf_client):
     )
 
     assert resp.status_code == 200
-    assert "File too large (max 2 MB)." in resp.get_data(as_text=True)
+    assert "Archivo demasiado grande (máx. 2 MB)." in resp.get_data(as_text=True)
     assert list(csrf_client.avatars.iterdir()) == []
     with csrf_client.app.app_context():
         assert db.session.get(User, csrf_client.user_id).avatar_path is None
@@ -260,7 +260,12 @@ def test_avatar_oversize_anonymous_redirected_to_login(csrf_app):
 def test_avatar_oversize_forced_change_redirected_to_password(csrf_app):
     # The 413 handler must also reapply the forced-change gate.
     with csrf_app.app.app_context():
-        user = User(username="csrf-flagged", status="active", must_change_password=True)
+        user = User(
+            username="csrf-flagged",
+            status="active",
+            must_change_password=True,
+            language="en",
+        )
         user.set_password("pass12345")
         db.session.add(user)
         db.session.commit()

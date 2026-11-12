@@ -38,7 +38,7 @@ class User(UserMixin, db.Model):
     must_change_password = db.Column(db.Boolean, nullable=False, default=False)
     avatar_path = db.Column(db.String(255))
     # UI display language ("en" / "es" — see app.i18n.SUPPORTED).
-    language = db.Column(db.String(5), nullable=False, default="en", server_default="en")
+    language = db.Column(db.String(5), nullable=False, default="es", server_default="es")
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(
         db.DateTime,

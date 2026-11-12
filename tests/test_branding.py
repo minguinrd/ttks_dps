@@ -335,7 +335,7 @@ def test_logo_oversize_rejected_with_csrf_enabled(csrf_admin):
     # the inline size error instead of werkzeug's generic 413, and no partial
     # branding state may be written.
     assert resp.status_code == 200
-    assert "File too large (max 2 MB)." in resp.get_data(as_text=True)
+    assert "Archivo demasiado grande (máx. 2 MB)." in resp.get_data(as_text=True)
     branding_dir = csrf_admin.data_dir / "branding"
     assert not branding_dir.exists() or list(branding_dir.iterdir()) == []
     with csrf_admin.app.app_context():

@@ -50,6 +50,8 @@ def user_factory(app, db_schema):
 
     def _factory(role="user", status="active", password="pass12345", **overrides):
         overrides.setdefault("username", f"user-{uuid4().hex[:8]}")
+        # Tests that assert English text pin the language explicitly; the app default is Spanish.
+        overrides.setdefault("language", "en")
         with app.app_context():
             user = User(role=role, status=status, **overrides)
             user.set_password(password)
