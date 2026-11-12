@@ -1,4 +1,4 @@
-"""Google sign-in: env-gated button, OAuth callback, pending auto-create."""
+"""Google sign-in: env-gated button, OAuth callback, active auto-create."""
 
 from urllib.parse import parse_qs, urlparse
 
@@ -111,26 +111,29 @@ def test_google_redirect_failure_returns_generic_error(google_app, monkeypatch):
     assert GOOGLE_FAILURE_MESSAGE in page.get_data(as_text=True)
 
 
-def test_google_new_email_creates_pending_user(app, google_app, db_schema, monkeypatch):
+def test_google_new_email_creates_active_user(app, google_app, db_schema, monkeypatch):
     stub_google(monkeypatch, email="New.Person@Example.com", sub="g-1", name="New Person")
     client = google_app.test_client()
 
     resp = client.get("/auth/google/callback")
 
     assert resp.status_code == 302
-    assert resp.headers["Location"] == "/auth/pending"
+    assert resp.headers["Location"] == "/"
     with app.app_context():
         user = db.session.scalar(db.select(User).filter_by(email="new.person@example.com"))
         assert user is not None
-        assert user.status == "pending"
+        assert user.status == "active"
         assert user.role == "user"
         assert user.department_id is None
         assert user.google_sub == "g-1"
         assert user.username == "new.person"
     with client.session_transaction() as sess:
-        assert "_user_id" not in sess
+        assert sess.get("_user_id") == str(user.id)
 
 
+# Loophole lock: a password-registered PENDING account must stay refused at the
+# Google callback — never activated by signing in with Google. Also covers
+# pending users created by the pre-auto-approval code. Do not delete as stale.
 def test_pending_google_user_refused_on_login(app, google_app, user_factory, monkeypatch):
     user_factory(username="pendy", email="pendy@example.com", status="pending")
     stub_google(monkeypatch, email="pendy@example.com", sub="g-2")
@@ -209,7 +212,7 @@ def test_username_collision_gets_suffix(app, google_app, user_factory, monkeypat
         created = db.session.scalar(db.select(User).filter_by(google_sub="g-6"))
         assert created is not None
         assert created.username == "dup-2"
-        assert created.status == "pending"
+        assert created.status == "active"
 
 
 def test_state_mismatch_rejected(app, google_app, db_schema):
@@ -247,18 +250,18 @@ def test_google_new_user_notifies_admins(app, google_app, user_factory, monkeypa
     with app.app_context():
         rows = db.session.scalars(db.select(Notification).order_by(Notification.id)).all()
         assert [row.user_id for row in rows] == [admin.id]
-        assert rows[0].message == "New user new.person is awaiting approval."
+        assert rows[0].message == "New user new.person registered via Google."
         assert rows[0].url == "/admin/"
         assert rows[0].ticket_id is None
         assert rows[0].is_read is False
 
 
-def test_pending_google_retry_does_not_notify_again(app, google_app, user_factory, monkeypatch):
+def test_google_retry_does_not_notify_again(app, google_app, user_factory, monkeypatch):
     admin = user_factory(username="g-admin-retry", role="admin")
     stub_google(monkeypatch, email="re.retry@example.com", sub="g-8")
     client = google_app.test_client()
 
-    client.get("/auth/google/callback")  # first sign-in creates the pending user
+    client.get("/auth/google/callback")  # first sign-in creates the user
     with app.app_context():
         rows = db.session.scalars(db.select(Notification).filter_by(user_id=admin.id)).all()
         assert len(rows) == 1
@@ -268,7 +271,7 @@ def test_pending_google_retry_does_not_notify_again(app, google_app, user_factor
             row.is_read = True
         db.session.commit()
 
-    client.get("/auth/google/callback")  # still-pending user retries Google
+    client.get("/auth/google/callback")  # returning user retries Google
 
     with app.app_context():
         rows = db.session.scalars(db.select(Notification).filter_by(user_id=admin.id)).all()

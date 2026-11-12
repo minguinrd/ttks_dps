@@ -12,15 +12,16 @@ class GoogleAuthError(Exception):
 
 
 def find_or_create_google_user(email: str, *, sub: str, name: str | None) -> tuple[User, bool]:
-    """Match a Google identity to a user, creating a pending user when new.
+    """Match a Google identity to a user, creating an active user when new.
 
     Returns ``(user, created)``. The Google ``sub`` is the primary key of the
     identity: it wins over an email match. An email match that carries a
     *different* ``google_sub`` is an identity conflict and raises
     :class:`GoogleAuthError`. A link-less email match gets its ``google_sub``
-    set. New users land as ``pending`` so the admin approval flow still gates
-    every first sign-in, and notify all admins just like self-registration.
-    Commits the session.
+    set. Google proved the account, so new users are born ``active`` and land
+    in the app immediately; all admins get a ``registered via Google``
+    notification for visibility. Pre-existing accounts keep their status
+    (pending stays refused by the callback). Commits the session.
     """
     user = db.session.scalar(db.select(User).filter_by(google_sub=sub))
     if user is not None:
@@ -45,7 +46,7 @@ def find_or_create_google_user(email: str, *, sub: str, name: str | None) -> tup
         username=username,
         full_name=name,
         email=lowered,
-        status="pending",
+        status="active",
         role="user",
         department_id=None,
         google_sub=sub,
@@ -54,13 +55,13 @@ def find_or_create_google_user(email: str, *, sub: str, name: str | None) -> tup
     # accounts until an admin sets one.
     user.set_password(secrets.token_urlsafe(32))
     db.session.add(user)
-    # Every new pending account pings all admins (the /admin/ panel is where
-    # approvals happen) — exactly like self-registration. Existing users
-    # retrying Google never reach this branch.
+    # Every new account pings all admins: they keep visibility of newcomers
+    # even though approval is gone. Existing users retrying Google never
+    # reach this branch.
     admin_ids = db.session.scalars(db.select(User.id).where(User.role == Role.admin)).all()
     notify(
         admin_ids,
-        f"New user {user.username} is awaiting approval.",
+        f"New user {user.username} registered via Google.",
         "/admin/",
     )
     db.session.commit()

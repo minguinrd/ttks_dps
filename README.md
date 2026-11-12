@@ -80,7 +80,7 @@ Pinned in `.env.example` and read by `app/config.py`:
 | `ADMIN_PASSWORD` | Initial admin password (forced change on first login) |
 | `BACKUP_HOUR` | Daily backup time as `HH:MM`, local (default `03:00`) |
 | `BACKUP_KEEP` | How many backup files to keep in `DATA_DIR/backups` (default `7`) |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional Google sign-in — the "Sign in with Google" button appears only when both are set |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional Google sign-in — the "Sign in with Google" button appears only when both are set. Google sign-in creates an active account immediately (no admin approval); password registration still requires approval. |
 
 `FLASK_APP=wsgi:app` is also set there for the flask CLI (the Docker image sets
 it itself).

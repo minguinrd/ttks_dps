@@ -2,18 +2,19 @@
 
 Date: 2026-11-11
 Status: awaiting human approval
+Amended 2026-11-11: Google-created accounts are now auto-approved — see 2026-11-11-google-autoapprove-design.md.
 Size: small change (short design; no builder check)
 
 ## Intent and why
 
-Employees mostly have personal Gmail, so Google sign-in should be a convenient second door into the existing account system — never a bypass of the admin-approval rule the app is built on. Separately, the admin departments page can create and delete but not rename; completing the CRUD is a small consistency fix.
+Employees mostly have personal Gmail, so Google sign-in should be a convenient second door into the existing account system — approval still gates password signups; Google signups are auto-approved (amended 2026-11-11). Separately, the admin departments page can create and delete but not rename; completing the CRUD is a small consistency fix.
 
 ## Goals
 
 - "Sign in with Google" button on the login page (shown only when Google credentials are configured)
-- First Google sign-in with an unknown email → auto-create a `pending` user (lands in the admin approval queue exactly like self-registration; username derived from the email; random unusable password hash; `google_sub` stored; department left unset)
+- First Google sign-in with an unknown email → auto-create an `active` user (Google proves the account, so no approval — amended 2026-11-11; username derived from the email; random unusable password hash; `google_sub` stored; department left unset)
 - Google sign-in with an email matching an existing account → log in (linking `google_sub` on first use; later logins match on `google_sub` first, then email, case-insensitive)
-- Pending and suspended accounts get the same pinned refusal messages as password login
+- Pending and suspended accounts get the same pinned refusal messages as password login (pre-existing pending accounts are still refused)
 - Department rename: `GET/POST /admin/departments/<id>/edit` with unique-name validation, admin-only, POST+CSRF
 
 ## Non-goals
@@ -24,7 +25,7 @@ Employees mostly have personal Gmail, so Google sign-in should be a convenient s
 
 ## Constraints
 
-- Security: Authlib handles state (CSRF) param, token exchange, and ID-token signature verification; only Google-asserted `email_verified` emails are trusted; the callback never creates an active account
+- Security: Authlib handles state (CSRF) param, token exchange, and ID-token signature verification; only Google-asserted `email_verified` emails are trusted; the callback never activates a pre-existing account; accounts it creates are active (amended 2026-11-11)
 - Feature is env-gated: with `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` unset the button is hidden and login works exactly as today (no dead button, no crash, local dev unaffected)
 - Department rename follows existing conventions: `role_required("admin")`, POST with CSRF, flash + redirect, duplicate name rejected with form error
 - Existing pinned strings and status semantics untouched
@@ -46,7 +47,7 @@ Employees mostly have personal Gmail, so Google sign-in should be a convenient s
 - Config keys: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (env, optional); `.env.example` and Compose updated with commented/optional entries
 - Login template: button below the password form, rendered only when configured
 - Departments: `admin.department_edit` route reusing `DepartmentForm`; Edit button per row in `departments.html`
-- Tests (pytest, following existing fixtures): unknown-email → pending created + no session + pending refusal message on retry; after fixture flips status → Google login works; existing active user links and logs in; suspended refused; state mismatch (tampered session) → error, nothing created; button hidden without config; rename happy path, duplicate rejected, `agent` gets 403
+- Tests (pytest, following existing fixtures): unknown-email → active created + session; pre-existing pending refused on retry; after fixture flips status → Google login works; existing active user links and logs in; suspended refused; state mismatch (tampered session) → error, nothing created; button hidden without config; rename happy path, duplicate rejected, `agent` gets 403
 - Google flow is tested by stubbing Authlib's client (deterministic fixture returning verified email/sub) — no network in tests
 
 ## What's left to the builder
