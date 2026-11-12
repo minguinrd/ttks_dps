@@ -1,6 +1,6 @@
 # Spanish as the default language — design
 
-**Status:** awaiting approval · **Amends:** `2026-11-11-branding-i18n-design.md`
+**Status:** approved 2026-11-12 · **Amends:** `2026-11-11-branding-i18n-design.md`
 (anonymous-English clause, lines 28–29)
 
 ## Context
