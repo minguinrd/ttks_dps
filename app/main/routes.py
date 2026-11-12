@@ -13,7 +13,8 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
-from app.branding import get_setting
+from app.admin.forms import LOGO_TOO_LARGE_ERROR, BrandingForm
+from app.branding import get_branding, get_setting
 from app.extensions import db
 from app.main import main_bp
 from app.main.forms import AVATAR_TOO_LARGE_ERROR, AvatarForm, ChangePasswordForm, ProfileForm
@@ -164,3 +165,19 @@ def avatar_upload_error_response():
     avatar_form = AvatarForm(formdata=None)
     avatar_form.avatar.errors = [AVATAR_TOO_LARGE_ERROR]
     return _render_profile(avatar_form)
+
+
+def branding_upload_error_response():
+    """Friendly "file too large" page for an oversized branding logo upload.
+
+    Also used by the app-level 413 handler: with CSRF enabled the body is
+    rejected while CSRF reads the parsed form (before_request), before the
+    route ever runs. No branding state is written, so the form just gets the
+    inline size error and the current settings.
+    """
+    branding_form = BrandingForm(formdata=None)
+    branding_form.logo.errors = [LOGO_TOO_LARGE_ERROR]
+    branding = get_branding()
+    branding_form.site_name.data = branding["site_name"]
+    branding_form.accent_color.data = branding["accent_color"]
+    return render_template("admin/branding.html", form=branding_form)

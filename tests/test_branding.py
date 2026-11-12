@@ -2,12 +2,15 @@
 
 import re
 from io import BytesIO
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy.exc import OperationalError
 
+from app import create_app
 from app.branding import get_branding, get_setting, set_setting
 from app.extensions import db
+from app.models import User
 
 
 def test_settings_defaults_without_rows(app, db_schema):
@@ -255,3 +258,77 @@ def test_logo_remove_reverts_to_text_brand(app, db_schema, client, user_factory,
         assert get_branding()["has_logo"] is False
     html = app.test_client().get("/auth/login").get_data(as_text=True)
     assert re.search(r'<a class="navbar-brand"[^>]*>\s*Acme IT\s*</a\s*>', html)
+
+
+def _csrf_token(html):
+    match = re.search(r'name="csrf_token"[^>]*value="([^"]+)"', html)
+    assert match is not None, "csrf_token field not found"
+    return match.group(1)
+
+
+@pytest.fixture()
+def csrf_admin(tmp_path):
+    """CSRF-enabled app (the production setting) with a logged-in admin.
+
+    Mirrors ``tests.test_profile``'s ``csrf_app``/``csrf_client`` so the
+    oversize-upload path through the app-level 413 handler is exercised for
+    real: CSRF's ``before_request`` rejects the body before any route runs.
+    """
+    (tmp_path / "avatars").mkdir()
+    app = create_app(
+        {
+            "TESTING": True,
+            "SECRET_KEY": "test",
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path}/test.db",
+            "WTF_CSRF_ENABLED": True,
+            "AVATAR_DIR": str(tmp_path / "avatars"),
+            "DATA_DIR": str(tmp_path),
+        }
+    )
+    with app.app_context():
+        db.create_all()
+        admin = User(username="brand-admin", role="admin", status="active")
+        admin.set_password("pass12345")
+        db.session.add(admin)
+        db.session.commit()
+    client = app.test_client()
+    token = _csrf_token(client.get("/auth/login").get_data(as_text=True))
+    resp = client.post(
+        "/auth/login",
+        data={"username": "brand-admin", "password": "pass12345", "csrf_token": token},
+    )
+    assert resp.status_code == 302
+    return SimpleNamespace(app=app, client=client, data_dir=tmp_path)
+
+
+def test_logo_oversize_rejected_with_csrf_enabled(csrf_admin):
+    # Prove CSRF protection is genuinely enforced on this app (no token -> 400).
+    resp = csrf_admin.client.post(
+        "/admin/branding", data={"site_name": "X", "accent_color": "#123456"}
+    )
+    assert resp.status_code == 400
+
+    token = _csrf_token(csrf_admin.client.get("/admin/branding").get_data(as_text=True))
+    big = b"\x89PNG\r\n\x1a\n" + b"x" * (2 * 1024 * 1024 + 1)
+    resp = csrf_admin.client.post(
+        "/admin/branding",
+        data={
+            "csrf_token": token,
+            "site_name": "Acme IT",
+            "accent_color": "#123456",
+            "logo": (BytesIO(big), "big.png", "image/png"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    # The body is rejected during CSRF's before_request — before the route ever
+    # runs — so the app-level 413 handler must render the branding form with
+    # the inline size error instead of werkzeug's generic 413, and no partial
+    # branding state may be written.
+    assert resp.status_code == 200
+    assert "File too large (max 2 MB)." in resp.get_data(as_text=True)
+    branding_dir = csrf_admin.data_dir / "branding"
+    assert not branding_dir.exists() or list(branding_dir.iterdir()) == []
+    with csrf_admin.app.app_context():
+        assert get_setting("logo_file") is None
+        assert get_setting("site_name") is None

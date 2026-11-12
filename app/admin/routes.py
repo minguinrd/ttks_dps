@@ -8,16 +8,11 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
 from app.admin import admin_bp
-from app.admin.forms import (
-    LOGO_TOO_LARGE_ERROR,
-    AdminUserForm,
-    BrandingForm,
-    DepartmentForm,
-    ResetPasswordForm,
-)
+from app.admin.forms import AdminUserForm, BrandingForm, DepartmentForm, ResetPasswordForm
 from app.backup import run_backup_cycle
 from app.branding import get_branding, get_setting, set_setting
 from app.extensions import db
+from app.main.routes import branding_upload_error_response
 from app.models import Category, Department, Priority, Role, Setting, Ticket, TicketStatus, User
 from app.permissions import role_required
 
@@ -260,11 +255,9 @@ def branding():
         validated = form.validate_on_submit()
     except RequestEntityTooLarge:
         # The body is rejected while the form is parsed — before validators can
-        # run — so turn it into the same inline error the size validator raises.
-        form = BrandingForm(formdata=None)
-        form.logo.errors = [LOGO_TOO_LARGE_ERROR]
-        _prefill_branding_form(form)
-        return render_template("admin/branding.html", form=form)
+        # run — so render the same "file too large" page the app-level 413
+        # handler uses on the CSRF-enabled production path.
+        return branding_upload_error_response()
     if validated:
         set_setting("site_name", form.site_name.data)
         set_setting("accent_color", form.accent_color.data)

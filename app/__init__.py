@@ -15,7 +15,7 @@ from app.cli import restore_backup, seed_admin
 from app.config import Config
 from app.extensions import csrf, db, login_manager, migrate, oauth
 from app.main import main_bp
-from app.main.routes import avatar_upload_error_response
+from app.main.routes import avatar_upload_error_response, branding_upload_error_response
 from app.notifications import unread_count
 from app.reports import reports_bp
 from app.tickets import tickets_bp
@@ -104,10 +104,12 @@ def create_app(config: dict | None = None) -> Flask:
         if current_user.must_change_password:
             flash(FORCED_PASSWORD_CHANGE_MESSAGE, "warning")
             return redirect(url_for("main.profile_password"))
-        # Show the avatar form error for avatar uploads; other endpoints keep
-        # werkzeug's default 413.
+        # Show the upload form error for avatar/logo uploads; other endpoints
+        # keep werkzeug's default 413.
         if request.endpoint == "main.avatar_upload":
             return avatar_upload_error_response()
+        if request.endpoint == "admin.branding":
+            return branding_upload_error_response()
         return error.get_response()
 
     return app
