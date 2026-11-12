@@ -43,13 +43,22 @@ def test_accent_color_sanitized_on_render(app, db_schema, client):
 def test_branding_db_error_not_silent(app, db_schema, monkeypatch):
     """Only the missing-``settings``-table case degrades to defaults.
 
-    Any other OperationalError (lock, I/O) must propagate instead of being
-    silently swallowed as "default branding".
+    Any other OperationalError — lock, I/O, or ``no such table`` for a
+    DIFFERENT table name — must propagate instead of being silently swallowed
+    as "default branding".
     """
 
     def raise_operational(message):
         def _get(*args, **kwargs):
             raise OperationalError(message, None, Exception(message))
+
+        return _get
+
+    def raise_no_such_table(table):
+        message = f"no such table: {table}"
+
+        def _get(*args, **kwargs):
+            raise OperationalError(message, None, None)
 
         return _get
 
@@ -64,6 +73,14 @@ def test_branding_db_error_not_silent(app, db_schema, monkeypatch):
 
         monkeypatch.setattr(db.session, "get", raise_operational("database is locked"))
         with pytest.raises(OperationalError, match="database is locked"):
+            get_branding()
+
+        # A missing DIFFERENT table must propagate: the name must match exactly.
+        monkeypatch.setattr(db.session, "get", raise_no_such_table("settings-archive"))
+        with pytest.raises(OperationalError, match="no such table: settings-archive"):
+            get_branding()
+        monkeypatch.setattr(db.session, "get", raise_no_such_table("settings archive"))
+        with pytest.raises(OperationalError, match="no such table: settings archive"):
             get_branding()
 
 

@@ -14,14 +14,26 @@ DEFAULTS: dict[str, str] = {
 }
 
 
-def _is_missing_settings_table(exc: OperationalError) -> bool:
-    """True only for SQLite's ``no such table: settings`` (un-migrated DB).
+_TABLE_NAME = re.compile(
+    r"""no\s+such\s+table\s*:\s*["'`]?(?P<name>.*?)["'`]?\s*$""", re.IGNORECASE
+)
 
-    Loose match (case/whitespace/quote tolerant) so driver wording drift still
-    hits; anything else — locks, I/O errors — must propagate.
+
+def _is_missing_settings_table(exc: OperationalError) -> bool:
+    """True only for EXACTLY SQLite's ``no such table: settings`` (un-migrated DB).
+
+    The table name is compared exactly, so ``no such table`` for any other
+    table (``settings-archive``, ``settings archive``, ...) re-raises, as does
+    every other OperationalError (locks, I/O). The message is taken from the
+    original DBAPI error (``exc.orig``) — ``str(exc)`` appends ``[SQL: ...]``
+    noise — falling back to the statement for errors raised without an orig.
     """
-    message = re.sub(r"\s+", " ", str(exc)).lower()
-    return re.search(r"no such table[:\s]*\"?'?settings\b", message) is not None
+    raw = exc.orig if exc.orig is not None else exc.statement
+    if raw is None:
+        return False
+    message = re.sub(r"\s+", " ", str(raw)).strip().lower()
+    match = _TABLE_NAME.search(message)
+    return match is not None and match.group("name").strip("\"'`") == "settings"
 
 
 def get_setting(key: str) -> str | None:
