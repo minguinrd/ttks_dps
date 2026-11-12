@@ -12,6 +12,15 @@ SQLite database, in-app notifications only — no email is ever sent.
   admins also set the site name, logo, and accent color at **Admin → Branding**
   (logo uploads are stored in `DATA_DIR/branding/`)
 
+## Display language
+
+Each user picks English or Spanish on their profile page (`/profile`); the
+choice applies to every page from the next request on. New user-visible strings
+must be marked with `_()` and added to `app/locales/es.json` — the
+`tests/test_i18n_completeness.py` gate fails the build on any marked string
+missing from the catalog, any stale catalog key, or any computed translation
+key.
+
 ## Local development
 
 ```sh

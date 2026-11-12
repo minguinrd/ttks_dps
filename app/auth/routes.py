@@ -5,15 +5,16 @@ from app.auth import auth_bp
 from app.auth.forms import LoginForm, RegisterForm
 from app.auth.google_login import find_or_create_google_user
 from app.extensions import db, oauth
+from app.i18n import _
 from app.models import Role, User
 from app.notifications import notify
 
 # Pinned refusal strings (shared by the password and Google login paths).
-PENDING_MESSAGE = "Your account is awaiting admin approval."
-SUSPENDED_MESSAGE = "This account has been suspended. Contact the administrator."
+PENDING_MESSAGE = _("Your account is awaiting admin approval.")
+SUSPENDED_MESSAGE = _("This account has been suspended. Contact the administrator.")
 # Generic message for every Google sign-in failure (config missing, bad state,
 # unverified email, identity conflict, third-party errors): never leak which.
-GOOGLE_FAILURE_MESSAGE = (
+GOOGLE_FAILURE_MESSAGE = _(
     "Google sign-in failed. Please try again or use your username and password."
 )
 
@@ -25,7 +26,7 @@ def _google_configured() -> bool:
 
 
 def _google_failure():
-    flash(GOOGLE_FAILURE_MESSAGE, "danger")
+    flash(_(GOOGLE_FAILURE_MESSAGE), "danger")
     return redirect(url_for("auth.login"))
 
 
@@ -69,11 +70,11 @@ def login():
     if form.validate_on_submit():
         user = db.session.scalar(db.select(User).filter_by(username=form.username.data))
         if user is None or not user.check_password(form.password.data):
-            flash("Invalid username or password.", "danger")
+            flash(_("Invalid username or password."), "danger")
         elif user.status == "pending":
-            flash(PENDING_MESSAGE, "warning")
+            flash(_(PENDING_MESSAGE), "warning")
         elif user.status == "suspended":
-            flash(SUSPENDED_MESSAGE, "danger")
+            flash(_(SUSPENDED_MESSAGE), "danger")
         else:
             login_user(user)
             return redirect(url_for("main.index"))
@@ -114,10 +115,10 @@ def google_callback():
     # The status gate sits outside the try: refusals show their specific
     # pinned message, and only active accounts get a session.
     if user.status == "pending":
-        flash(PENDING_MESSAGE, "warning")
+        flash(_(PENDING_MESSAGE), "warning")
         return redirect(url_for("auth.pending"))
     if user.status == "suspended":
-        flash(SUSPENDED_MESSAGE, "danger")
+        flash(_(SUSPENDED_MESSAGE), "danger")
         return redirect(url_for("auth.login"))
     login_user(user)
     return redirect(url_for("main.index"))

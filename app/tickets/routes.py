@@ -4,13 +4,14 @@ from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
+from app.i18n import _
 from app.models import Comment, Department, InvalidTransition, Role, Ticket, TicketStatus, User
 from app.notifications import notify
 from app.permissions import role_required
 from app.tickets import tickets_bp
 from app.tickets.forms import AssignForm, CommentForm, ResolveForm, TicketEditForm, TicketForm
 
-INVALID_TRANSITION_MESSAGE = "This action is not allowed for the current ticket status."
+INVALID_TRANSITION_MESSAGE = _("This action is not allowed for the current ticket status.")
 
 
 @tickets_bp.route("/mine")
@@ -70,7 +71,7 @@ def new():
         )
         db.session.add(ticket)
         db.session.commit()
-        flash("Ticket created.", "success")
+        flash(_("Ticket created."), "success")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
     return render_template("tickets/form.html", form=form)
 
@@ -111,9 +112,9 @@ def comment(ticket_id):
                 params={"ticket_id": ticket.id},
             )
         db.session.commit()
-        flash("Comment posted.", "success")
+        flash(_("Comment posted."), "success")
     else:
-        flash("Comment text is required.", "danger")
+        flash(_("Comment text is required."), "danger")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
 
 
@@ -130,9 +131,9 @@ def edit(ticket_id):
         ticket.category = form.category.data
         ticket.priority = form.priority.data
         db.session.commit()
-        flash("Ticket updated.", "success")
+        flash(_("Ticket updated."), "success")
     else:
-        flash("All fields are required.", "danger")
+        flash(_("All fields are required."), "danger")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
 
 
@@ -145,7 +146,7 @@ def claim(ticket_id):
     try:
         ticket.claim(current_user)
     except InvalidTransition:
-        flash(INVALID_TRANSITION_MESSAGE, "danger")
+        flash(_(INVALID_TRANSITION_MESSAGE), "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
     notify(
         [ticket.assignee.id],
@@ -156,7 +157,7 @@ def claim(ticket_id):
         params={"ticket_id": ticket.id},
     )
     db.session.commit()
-    flash("Ticket claimed.", "success")
+    flash(_("Ticket claimed."), "success")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
 
 
@@ -169,10 +170,10 @@ def release(ticket_id):
     try:
         ticket.release(current_user)
     except InvalidTransition:
-        flash(INVALID_TRANSITION_MESSAGE, "danger")
+        flash(_(INVALID_TRANSITION_MESSAGE), "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
     db.session.commit()
-    flash("Ticket released.", "success")
+    flash(_("Ticket released."), "success")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
 
 
@@ -184,18 +185,18 @@ def assign(ticket_id):
         abort(403)
     form = _assign_form()
     if not form.validate_on_submit():
-        flash("Select a valid agent.", "danger")
+        flash(_("Select a valid agent."), "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
     agent = db.session.get(User, form.agent_id.data)
     if agent is None or not agent.is_active:
         # Suspended/pending targets are not assignable even if forged past the
         # choice list.
-        flash("Select a valid agent.", "danger")
+        flash(_("Select a valid agent."), "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
     try:
         ticket.assign_to(agent, current_user)
     except InvalidTransition:
-        flash(INVALID_TRANSITION_MESSAGE, "danger")
+        flash(_(INVALID_TRANSITION_MESSAGE), "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
     notify(
         [agent.id],
@@ -206,7 +207,7 @@ def assign(ticket_id):
         params={"ticket_id": ticket.id},
     )
     db.session.commit()
-    flash("Ticket assigned.", "success")
+    flash(_("Ticket assigned."), "success")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
 
 
@@ -222,7 +223,7 @@ def resolve(ticket_id):
     try:
         ticket.resolve(current_user, form.resolution_note.data)
     except InvalidTransition:
-        flash(INVALID_TRANSITION_MESSAGE, "danger")
+        flash(_(INVALID_TRANSITION_MESSAGE), "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
     notify(
         [ticket.requester_id],
@@ -233,7 +234,7 @@ def resolve(ticket_id):
         params={"ticket_id": ticket.id},
     )
     db.session.commit()
-    flash("Ticket resolved.", "success")
+    flash(_("Ticket resolved."), "success")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
 
 
@@ -246,7 +247,7 @@ def reopen(ticket_id):
     try:
         ticket.reopen(current_user)
     except InvalidTransition:
-        flash(INVALID_TRANSITION_MESSAGE, "danger")
+        flash(_(INVALID_TRANSITION_MESSAGE), "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
     body = request.form.get("comment", "").strip()
     if body:
@@ -266,7 +267,7 @@ def reopen(ticket_id):
         params={"ticket_id": ticket.id},
     )
     db.session.commit()
-    flash("Ticket reopened.", "success")
+    flash(_("Ticket reopened."), "success")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
 
 
@@ -280,7 +281,7 @@ def close(ticket_id):
     try:
         ticket.close(current_user)
     except InvalidTransition:
-        flash(INVALID_TRANSITION_MESSAGE, "danger")
+        flash(_(INVALID_TRANSITION_MESSAGE), "danger")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
     notify(
         [ticket.requester_id],
@@ -291,7 +292,7 @@ def close(ticket_id):
         params={"ticket_id": ticket.id},
     )
     db.session.commit()
-    flash("Ticket closed.", "success")
+    flash(_("Ticket closed."), "success")
     return redirect(url_for("tickets.detail", ticket_id=ticket.id))
 
 
@@ -337,7 +338,7 @@ def _assign_form() -> AssignForm:
         .where(User.role.in_((Role.agent, Role.admin)), User.status == "active")
         .order_by(User.username)
     ).all()
-    form.agent_id.choices = [(0, "Select an agent…")] + [
+    form.agent_id.choices = [(0, _("Select an agent…"))] + [
         (agent.id, agent.full_name or agent.username) for agent in agents
     ]
     return form

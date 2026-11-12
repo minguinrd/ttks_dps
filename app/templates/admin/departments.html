@@ -1,18 +1,16 @@
-{% extends "base.html" %} {% block title %}Departments{% endblock %} {% block content %}
-<h1 class="h4 mb-3">Departments</h1>
+{% extends "base.html" %} {% from "macros/forms.html" import field_label, field_errors %} {% block title %}{{ _("Departments") }}{% endblock %} {% block content %}
+<h1 class="h4 mb-3">{{ _("Departments") }}</h1>
 
 <form method="post" class="card shadow-sm mb-3" novalidate>
   <div class="card-body">
     {{ form.hidden_tag() }}
     <div class="row g-2 align-items-end">
       <div class="col-md">
-        {{ form.name.label(class_="form-label") }} {{
-        form.name(class_="form-control" + (" is-invalid" if form.name.errors else "")) }} {% for
-        error in form.name.errors %}
-        <div class="invalid-feedback d-block">{{ error }}</div>
-        {% endfor %}
+        {{ field_label(form.name) }} {{
+        form.name(class_="form-control" + (" is-invalid" if form.name.errors else "")) }}
+        {{ field_errors(form.name) }}
       </div>
-      <div class="col-auto">{{ form.submit(class_="btn btn-primary") }}</div>
+      <div class="col-auto">{{ form.submit(class_="btn btn-primary", value=_(form.submit.label.text)) }}</div>
     </div>
   </div>
 </form>
@@ -22,8 +20,8 @@
   <table class="table align-middle mb-0">
     <thead>
       <tr>
-        <th>Name</th>
-        <th>Users</th>
+        <th>{{ _("Name") }}</th>
+        <th>{{ _("Users") }}</th>
         <th></th>
       </tr>
     </thead>
@@ -36,16 +34,16 @@
           <a
             class="btn btn-outline-secondary btn-sm"
             href="{{ url_for('admin.department_edit', department_id=department.id) }}"
-            >Edit</a
+            >{{ _("Edit") }}</a
           >
           <form
             method="post"
             action="{{ url_for('admin.department_delete', department_id=department.id) }}"
             class="d-inline"
-            data-confirm="Delete this department?"
+            data-confirm="{{ _("Delete this department?") }}"
           >
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            <button type="submit" class="btn btn-danger btn-sm">{{ _("Delete") }}</button>
           </form>
         </td>
       </tr>
@@ -54,5 +52,5 @@
   </table>
 </div>
 {% else %}
-<div class="card card-body shadow-sm text-muted">No departments yet.</div>
+<div class="card card-body shadow-sm text-muted">{{ _("No departments yet.") }}</div>
 {% endif %} {% endblock %}

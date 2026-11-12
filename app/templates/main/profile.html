@@ -1,15 +1,12 @@
-{% extends "base.html" %} {% block title %}{{ _("Profile") }}{% endblock %} {% block content %}
+{% extends "base.html" %} {% from "macros/forms.html" import field_label, field_errors %} {% block title %}{{ _("Profile") }}{% endblock %} {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-8 col-lg-6">
     <h1 class="h4 mb-3">{{ _("Profile") }}</h1>
     <form method="post" action="{{ url_for('main.language_save') }}" novalidate>
       {{ language_form.hidden_tag() }}
       <div class="mb-3">
-        {{ language_form.language.label(class_="form-label", text=_("Language")) }} {{
-        language_form.language(class_="form-select") }} {% for error in
-        language_form.language.errors %}
-        <div class="invalid-feedback d-block">{{ error }}</div>
-        {% endfor %}
+        {{ field_label(language_form.language) }} {{
+        language_form.language(class_="form-select") }} {{ field_errors(language_form.language) }}
       </div>
       {{ language_form.submit(class_="btn btn-primary", value=_("Save")) }}
     </form>
@@ -17,18 +14,14 @@
     <form method="post" action="{{ url_for('main.profile') }}" novalidate>
       {{ form.hidden_tag() }}
       <div class="mb-3">
-        {{ form.full_name.label(class_="form-label", text=_("Full name")) }} {{
+        {{ field_label(form.full_name) }} {{
         form.full_name(class_="form-control" + (" is-invalid" if form.full_name.errors else "")) }}
-        {% for error in form.full_name.errors %}
-        <div class="invalid-feedback d-block">{{ error }}</div>
-        {% endfor %}
+        {{ field_errors(form.full_name) }}
       </div>
       <div class="mb-3">
-        {{ form.email.label(class_="form-label", text=_("Email")) }} {{
-        form.email(class_="form-control" + (" is-invalid" if form.email.errors else "")) }} {% for
-        error in form.email.errors %}
-        <div class="invalid-feedback d-block">{{ error }}</div>
-        {% endfor %}
+        {{ field_label(form.email) }} {{
+        form.email(class_="form-control" + (" is-invalid" if form.email.errors else "")) }}
+        {{ field_errors(form.email) }}
       </div>
       {{ form.submit(class_="btn btn-primary", value=_("Save")) }}
       <a class="btn btn-outline-secondary" href="{{ url_for('main.profile_password') }}"
@@ -45,12 +38,9 @@
     >
       {{ avatar_form.hidden_tag() }}
       <div class="mb-3">
-        {{ avatar_form.avatar.label(class_="form-label", text=_("Avatar")) }} {{
+        {{ field_label(avatar_form.avatar) }} {{
         avatar_form.avatar(class_="form-control" + (" is-invalid" if avatar_form.avatar.errors else
-        "")) }}
-        {% for error in avatar_form.avatar.errors %}
-        <div class="invalid-feedback d-block">{{ error }}</div>
-        {% endfor %}
+        "")) }} {{ field_errors(avatar_form.avatar) }}
       </div>
       {{ avatar_form.submit(class_="btn btn-primary", value=_("Upload")) }}
     </form>

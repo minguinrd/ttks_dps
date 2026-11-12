@@ -1,8 +1,8 @@
 {% extends "base.html" %} {% from "macros/badges.html" import status_badge, category_badge,
-priority_badge %} {% block title %}Queue{% endblock %} {% block content %}
+priority_badge, status_label, category_label, priority_label %} {% block title %}{{ _("Queue") }}{% endblock %} {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h4 mb-0">Ticket Queue</h1>
-  <a class="btn btn-primary" href="{{ url_for('tickets.new') }}">New ticket</a>
+  <h1 class="h4 mb-0">{{ _("Ticket Queue") }}</h1>
+  <a class="btn btn-primary" href="{{ url_for('tickets.new') }}">{{ _("New ticket") }}</a>
 </div>
 
 {# Filters narrow the queue via query params; an empty value means "no filter". #}
@@ -10,48 +10,48 @@ priority_badge %} {% block title %}Queue{% endblock %} {% block content %}
   <div class="card-body">
     <div class="row g-2 align-items-end">
       <div class="col-md">
-        <label class="form-label" for="filter-status">Status</label>
+        <label class="form-label" for="filter-status">{{ _("Status") }}</label>
         <select class="form-select" id="filter-status" name="status">
-          <option value="">Any</option>
+          <option value="">{{ _("Any") }}</option>
           {% for value in ["open", "assigned", "resolved", "closed"] %}
           <option value="{{ value }}" {% if request.args.get("status") == value %}selected{% endif %}>
-            {{ value }}
+            {{ status_label(value) }}
           </option>
           {% endfor %}
         </select>
       </div>
       <div class="col-md">
-        <label class="form-label" for="filter-category">Category</label>
+        <label class="form-label" for="filter-category">{{ _("Category") }}</label>
         <select class="form-select" id="filter-category" name="category">
-          <option value="">Any</option>
+          <option value="">{{ _("Any") }}</option>
           {% for value in ["hardware", "software", "network", "access", "other"] %}
           <option
             value="{{ value }}"
             {% if request.args.get("category") == value %}selected{% endif %}
           >
-            {{ value }}
+            {{ category_label(value) }}
           </option>
           {% endfor %}
         </select>
       </div>
       <div class="col-md">
-        <label class="form-label" for="filter-priority">Priority</label>
+        <label class="form-label" for="filter-priority">{{ _("Priority") }}</label>
         <select class="form-select" id="filter-priority" name="priority">
-          <option value="">Any</option>
+          <option value="">{{ _("Any") }}</option>
           {% for value in ["low", "normal", "high", "urgent"] %}
           <option
             value="{{ value }}"
             {% if request.args.get("priority") == value %}selected{% endif %}
           >
-            {{ value }}
+            {{ priority_label(value) }}
           </option>
           {% endfor %}
         </select>
       </div>
       <div class="col-md">
-        <label class="form-label" for="filter-department">Department</label>
+        <label class="form-label" for="filter-department">{{ _("Department") }}</label>
         <select class="form-select" id="filter-department" name="department_id">
-          <option value="">Any</option>
+          <option value="">{{ _("Any") }}</option>
           {% for department in departments %}
           <option
             value="{{ department.id }}"
@@ -63,9 +63,9 @@ priority_badge %} {% block title %}Queue{% endblock %} {% block content %}
         </select>
       </div>
       <div class="col-md">
-        <label class="form-label" for="filter-requester">Requester</label>
+        <label class="form-label" for="filter-requester">{{ _("Requester") }}</label>
         <select class="form-select" id="filter-requester" name="requester_id">
-          <option value="">Any</option>
+          <option value="">{{ _("Any") }}</option>
           {% for requester in users %}
           <option
             value="{{ requester.id }}"
@@ -77,8 +77,8 @@ priority_badge %} {% block title %}Queue{% endblock %} {% block content %}
         </select>
       </div>
       <div class="col-auto">
-        <button type="submit" class="btn btn-primary">Apply</button>
-        <a class="btn btn-outline-secondary" href="{{ url_for('tickets.queue') }}">Reset</a>
+        <button type="submit" class="btn btn-primary">{{ _("Apply") }}</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('tickets.queue') }}">{{ _("Reset") }}</a>
       </div>
     </div>
   </div>
@@ -90,14 +90,14 @@ priority_badge %} {% block title %}Queue{% endblock %} {% block content %}
     <thead>
       <tr>
         <th>#</th>
-        <th>Subject</th>
-        <th>Status</th>
-        <th>Category</th>
-        <th>Priority</th>
-        <th>Requester</th>
-        <th>Department</th>
-        <th>Assignee</th>
-        <th>Age</th>
+        <th>{{ _("Subject") }}</th>
+        <th>{{ _("Status") }}</th>
+        <th>{{ _("Category") }}</th>
+        <th>{{ _("Priority") }}</th>
+        <th>{{ _("Requester") }}</th>
+        <th>{{ _("Department") }}</th>
+        <th>{{ _("Assignee") }}</th>
+        <th>{{ _("Age") }}</th>
         <th></th>
       </tr>
     </thead>
@@ -128,7 +128,7 @@ priority_badge %} {% block title %}Queue{% endblock %} {% block content %}
           {% if ticket.status == "open" %}
           <form method="post" action="{{ url_for('tickets.claim', ticket_id=ticket.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-primary btn-sm">Claim</button>
+            <button type="submit" class="btn btn-primary btn-sm">{{ _("Claim") }}</button>
           </form>
           {% endif %}
         </td>
@@ -138,5 +138,5 @@ priority_badge %} {% block title %}Queue{% endblock %} {% block content %}
   </table>
 </div>
 {% else %}
-<div class="card card-body shadow-sm text-muted">No tickets match the current filters.</div>
+<div class="card card-body shadow-sm text-muted">{{ _("No tickets match the current filters.") }}</div>
 {% endif %} {% endblock %}

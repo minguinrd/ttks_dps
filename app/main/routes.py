@@ -16,7 +16,7 @@ from flask_login import current_user, login_required
 from app.admin.forms import LOGO_TOO_LARGE_ERROR, BrandingForm
 from app.branding import get_branding, get_setting
 from app.extensions import db
-from app.i18n import SUPPORTED
+from app.i18n import SUPPORTED, _
 from app.main import main_bp
 from app.main.forms import (
     AVATAR_TOO_LARGE_ERROR,
@@ -79,7 +79,7 @@ def notifications_read_all():
     for row in rows:
         row.is_read = True
     db.session.commit()
-    flash("All notifications marked as read.", "success")
+    flash(_("All notifications marked as read."), "success")
     return redirect(url_for("main.notifications"))
 
 
@@ -91,7 +91,7 @@ def profile():
         current_user.full_name = form.full_name.data
         current_user.email = form.email.data
         db.session.commit()
-        flash("Profile updated.", "success")
+        flash(_("Profile updated."), "success")
         return redirect(url_for("main.profile"))
     return render_template(
         "main/profile.html",
@@ -109,7 +109,7 @@ def profile_password():
         current_user.set_password(form.new_password.data)
         current_user.must_change_password = False
         db.session.commit()
-        flash("Password changed.", "success")
+        flash(_("Password changed."), "success")
         return redirect(url_for("main.index"))
     return render_template("main/profile_password.html", form=form)
 
@@ -121,7 +121,7 @@ def language_save():
     if form.validate_on_submit() and form.language.data in SUPPORTED:
         current_user.language = form.language.data
         db.session.commit()
-        flash("Language updated.", "success")
+        flash(_("Language updated."), "success")
         return redirect(url_for("main.profile"))
     if not form.language.errors:
         form.language.errors = ["Not a valid choice."]
@@ -142,7 +142,7 @@ def avatar_upload():
         db.session.commit()
         if old_path:
             (avatar_dir / old_path).unlink(missing_ok=True)
-        flash("Avatar updated.", "success")
+        flash(_("Avatar updated."), "success")
         return redirect(url_for("main.profile"))
     return _render_profile(form)
 

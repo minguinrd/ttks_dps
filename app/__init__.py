@@ -14,7 +14,7 @@ from app.branding import get_branding
 from app.cli import restore_backup, seed_admin
 from app.config import Config
 from app.extensions import csrf, db, login_manager, migrate, oauth
-from app.i18n import SUPPORTED, translate
+from app.i18n import SUPPORTED, _, translate
 from app.main import main_bp
 from app.main.routes import avatar_upload_error_response, branding_upload_error_response
 from app.notifications import unread_count
@@ -23,7 +23,7 @@ from app.tickets import tickets_bp
 
 # Endpoints a user with a pending forced password change may still reach.
 PASSWORD_CHANGE_EXEMPT = {"static", "auth.logout", "main.profile_password"}
-FORCED_PASSWORD_CHANGE_MESSAGE = "You must change your password before continuing."
+FORCED_PASSWORD_CHANGE_MESSAGE = _("You must change your password before continuing.")
 
 
 def create_app(config: dict | None = None) -> Flask:
@@ -108,7 +108,7 @@ def create_app(config: dict | None = None) -> Flask:
             and current_user.must_change_password
             and request.endpoint not in PASSWORD_CHANGE_EXEMPT
         ):
-            flash(FORCED_PASSWORD_CHANGE_MESSAGE, "warning")
+            flash(_(FORCED_PASSWORD_CHANGE_MESSAGE), "warning")
             return redirect(url_for("main.profile_password"))
 
     @app.errorhandler(RequestEntityTooLarge)
@@ -119,7 +119,7 @@ def create_app(config: dict | None = None) -> Flask:
         if not current_user.is_authenticated:
             return login_manager.unauthorized()
         if current_user.must_change_password:
-            flash(FORCED_PASSWORD_CHANGE_MESSAGE, "warning")
+            flash(_(FORCED_PASSWORD_CHANGE_MESSAGE), "warning")
             return redirect(url_for("main.profile_password"))
         # Show the upload form error for avatar/logo uploads; other endpoints
         # keep werkzeug's default 413.

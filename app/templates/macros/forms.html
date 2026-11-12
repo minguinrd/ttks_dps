@@ -1,0 +1,30 @@
+{% macro field_label(field, class="form-label") -%}
+<label class="{{ class }}" for="{{ field.id }}">{{ _(field.label.text) }}</label>
+{%- endmacro %} {% macro field_errors(field) -%}
+{#- Rendering goes through _(error) per error: exact catalog key first, then
+   the placeholder-pattern match in app.i18n.translate, then the English
+   source. The validator messages below are listed as literal catalog keys so
+   the completeness scan (which only collects literal marks) can see them —
+   the strings originate in WTForms/Flask-WTF and in Python validators and are
+   never passed through a marked call site themselves. -#}
+{%- set validator_message_keys = [
+  _("This field is required."),
+  _("Invalid email address."),
+  _("Not a valid choice."),
+  _("The CSRF token is missing."),
+  _("The CSRF session token is missing."),
+  _("The CSRF token has expired."),
+  _("The CSRF token is invalid."),
+  _("The CSRF tokens do not match."),
+  _("Field must be at least {min} character long."),
+  _("Field must be at least {min} characters long."),
+  _("Field cannot be longer than {max} character."),
+  _("Field cannot be longer than {max} characters."),
+  _("Field must be exactly {max} character long."),
+  _("Field must be exactly {max} characters long."),
+  _("Field must be between {min} and {max} characters long."),
+] -%}
+{%- for error in field.errors %}
+<div class="invalid-feedback d-block">{{ _(error) }}</div>
+{%- endfor %}
+{%- endmacro %}

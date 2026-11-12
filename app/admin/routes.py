@@ -12,6 +12,7 @@ from app.admin.forms import AdminUserForm, BrandingForm, DepartmentForm, ResetPa
 from app.backup import run_backup_cycle
 from app.branding import get_branding, get_setting, set_setting
 from app.extensions import db
+from app.i18n import _
 from app.main.routes import branding_upload_error_response
 from app.models import Category, Department, Priority, Role, Setting, Ticket, TicketStatus, User
 from app.permissions import role_required
@@ -106,7 +107,7 @@ def user_new():
         user.set_password(form.initial_password.data)
         db.session.add(user)
         db.session.commit()
-        flash("User created.", "success")
+        flash(_("User created."), "success")
         return redirect(url_for("admin.users"))
     return render_template("admin/user_form.html", form=form, user=None, reset_form=None)
 
@@ -121,7 +122,7 @@ def user_edit(user_id):
         # An admin must never demote themselves: as the sole admin that would
         # lock administration out permanently. Name/email self-edits stay fine.
         if user.id == current_user.id and form.role.data != Role.admin:
-            flash("You cannot change your own role.", "danger")
+            flash(_("You cannot change your own role."), "danger")
             return redirect(url_for("admin.users"))
         # The username is fixed; editing covers name, email, role, department.
         user.full_name = form.full_name.data
@@ -129,7 +130,7 @@ def user_edit(user_id):
         user.role = form.role.data
         user.department_id = int(form.department.data) if form.department.data else None
         db.session.commit()
-        flash("User updated.", "success")
+        flash(_("User updated."), "success")
         return redirect(url_for("admin.users"))
     if not form.is_submitted():
         _prefill_user_form(form, user)
@@ -142,14 +143,14 @@ def user_edit(user_id):
 @login_required
 @role_required("admin")
 def user_approve(user_id):
-    return _set_status(user_id, "active", "User approved.")
+    return _set_status(user_id, "active", _("User approved."))
 
 
 @admin_bp.route("/users/<int:user_id>/reject", methods=["POST"])
 @login_required
 @role_required("admin")
 def user_reject(user_id):
-    return _set_status(user_id, "suspended", "User rejected.")
+    return _set_status(user_id, "suspended", _("User rejected."))
 
 
 @admin_bp.route("/users/<int:user_id>/suspend", methods=["POST"])
@@ -158,16 +159,16 @@ def user_reject(user_id):
 def user_suspend(user_id):
     # Suspending your own account would lock administration out permanently.
     if user_id == current_user.id:
-        flash("You cannot suspend your own account.", "danger")
+        flash(_("You cannot suspend your own account."), "danger")
         return redirect(url_for("admin.users"))
-    return _set_status(user_id, "suspended", "User suspended.")
+    return _set_status(user_id, "suspended", _("User suspended."))
 
 
 @admin_bp.route("/users/<int:user_id>/reactivate", methods=["POST"])
 @login_required
 @role_required("admin")
 def user_reactivate(user_id):
-    return _set_status(user_id, "active", "User reactivated.")
+    return _set_status(user_id, "active", _("User reactivated."))
 
 
 @admin_bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
@@ -181,7 +182,7 @@ def user_reset_password(user_id):
         user.set_password(form.new_password.data)
         user.must_change_password = True
         db.session.commit()
-        flash("Password reset.", "success")
+        flash(_("Password reset."), "success")
         return redirect(url_for("admin.user_edit", user_id=user.id))
     profile_form = AdminUserForm(formdata=None, edit_user=user)
     _prefill_user_form(profile_form, user)
@@ -196,7 +197,7 @@ def departments():
     if form.validate_on_submit():
         db.session.add(Department(name=form.name.data))
         db.session.commit()
-        flash("Department created.", "success")
+        flash(_("Department created."), "success")
         return redirect(url_for("admin.departments"))
     return render_template(
         "admin/departments.html",
@@ -213,18 +214,18 @@ def department_delete(department_id):
     if department is None:
         abort(404)
     if department.users:
-        flash("Cannot delete a department that still has users.", "danger")
+        flash(_("Cannot delete a department that still has users."), "danger")
         return redirect(url_for("admin.departments"))
     # Tickets also hold a foreign key to the department (enforced by SQLite).
     ticket_count = db.session.scalar(
         db.select(db.func.count(Ticket.id)).where(Ticket.department_id == department.id)
     )
     if ticket_count:
-        flash("Cannot delete a department that still has tickets.", "danger")
+        flash(_("Cannot delete a department that still has tickets."), "danger")
         return redirect(url_for("admin.departments"))
     db.session.delete(department)
     db.session.commit()
-    flash("Department deleted.", "success")
+    flash(_("Department deleted."), "success")
     return redirect(url_for("admin.departments"))
 
 
@@ -239,7 +240,7 @@ def department_edit(department_id):
     if form.validate_on_submit():
         department.name = form.name.data
         db.session.commit()
-        flash("Department updated.", "success")
+        flash(_("Department updated."), "success")
         return redirect(url_for("admin.departments"))
     if not form.is_submitted():
         form.name.data = department.name
@@ -263,7 +264,7 @@ def branding():
         set_setting("accent_color", form.accent_color.data)
         if form.logo.data and form.logo.data.filename:
             _store_logo(form.logo.data)
-        flash("Branding updated.", "success")
+        flash(_("Branding updated."), "success")
         return redirect(url_for("admin.branding"))
     if not form.is_submitted():
         _prefill_branding_form(form)
@@ -279,7 +280,7 @@ def branding_logo_delete():
     if row is not None:
         db.session.delete(row)
         db.session.commit()
-    flash("Logo removed.", "success")
+    flash(_("Logo removed."), "success")
     return redirect(url_for("admin.branding"))
 
 
@@ -307,7 +308,7 @@ def backup_page():
 @role_required("admin")
 def backup_create():
     path = run_backup_cycle()
-    flash(f"Backup created: {path.name}", "success")
+    flash(_("Backup created: {name}").format(name=path.name), "success")
     return redirect(url_for("admin.backup_page"))
 
 

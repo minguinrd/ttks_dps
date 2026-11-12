@@ -40,3 +40,8 @@ models in `app/models/` (user, ticket, notification), Alembic migrations in
 - The ticket status machine lives on `Ticket` (`app/models/ticket.py`) and
   raises `InvalidTransition` on illegal moves — catch it in routes, never
   mutate `Ticket.status` directly.
+- i18n: mark every user-visible literal with `_()` (`{{ _("...") }}` in
+  templates, `from app.i18n import _` in Python) and translate it in
+  `app/locales/es.json`. Keys are always literal strings — never f-strings or
+  concatenation. `tests/test_i18n_completeness.py` enforces both directions
+  (run it after touching any UI string).

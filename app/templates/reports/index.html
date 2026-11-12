@@ -1,8 +1,8 @@
 {% extends "base.html" %} {% from "macros/badges.html" import status_badge, category_badge,
-priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
+priority_badge, category_label, priority_label %} {% from "macros/forms.html" import field_label %} {% block title %}{{ _("Reports") }}{% endblock %} {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h4 mb-0">Reports</h1>
-  <button class="btn btn-secondary no-print" onclick="window.print()">Print / Save as PDF</button>
+  <h1 class="h4 mb-0">{{ _("Reports") }}</h1>
+  <button class="btn btn-secondary no-print" onclick="window.print()">{{ _("Print / Save as PDF") }}</button>
 </div>
 
 {# Filters narrow the report via query params; an empty value means "no filter". #}
@@ -10,31 +10,31 @@ priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
   <div class="card-body">
     <div class="row g-2 align-items-end">
       <div class="col-md">
-        {{ form.date_from.label(class_="form-label") }} {{ form.date_from(class_="form-control") }}
+        {{ field_label(form.date_from) }} {{ form.date_from(class_="form-control") }}
       </div>
       <div class="col-md">
-        {{ form.date_to.label(class_="form-label") }} {{ form.date_to(class_="form-control") }}
+        {{ field_label(form.date_to) }} {{ form.date_to(class_="form-control") }}
       </div>
       <div class="col-md">
-        {{ form.status.label(class_="form-label") }} {{ form.status(class_="form-select") }}
+        {{ field_label(form.status) }} {{ form.status(class_="form-select") }}
       </div>
       <div class="col-md">
-        {{ form.category.label(class_="form-label") }} {{ form.category(class_="form-select") }}
+        {{ field_label(form.category) }} {{ form.category(class_="form-select") }}
       </div>
       <div class="col-md">
-        {{ form.priority.label(class_="form-label") }} {{ form.priority(class_="form-select") }}
+        {{ field_label(form.priority) }} {{ form.priority(class_="form-select") }}
       </div>
       <div class="col-md">
-        {{ form.department_id.label(class_="form-label") }} {{
+        {{ field_label(form.department_id) }} {{
         form.department_id(class_="form-select") }}
       </div>
       <div class="col-md">
-        {{ form.requester_id.label(class_="form-label") }} {{
+        {{ field_label(form.requester_id) }} {{
         form.requester_id(class_="form-select") }}
       </div>
       <div class="col-auto">
-        <button type="submit" class="btn btn-primary">Apply</button>
-        <a class="btn btn-outline-secondary" href="{{ url_for('reports.index') }}">Reset</a>
+        <button type="submit" class="btn btn-primary">{{ _("Apply") }}</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('reports.index') }}">{{ _("Reset") }}</a>
       </div>
     </div>
   </div>
@@ -46,7 +46,7 @@ priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
     <div class="col">
       <div class="card shadow-sm text-center">
         <div class="card-body py-2">
-          <div class="text-muted small">Total</div>
+          <div class="text-muted small">{{ _("Total") }}</div>
           <div class="fs-2 fw-semibold">{{ summary.total }}</div>
         </div>
       </div>
@@ -54,7 +54,7 @@ priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
     <div class="col">
       <div class="card shadow-sm text-center">
         <div class="card-body py-2">
-          <div class="text-muted small">Open</div>
+          <div class="text-muted small">{{ _("Open") }}</div>
           <div class="fs-2 fw-semibold">{{ summary.open }}</div>
         </div>
       </div>
@@ -62,7 +62,7 @@ priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
     <div class="col">
       <div class="card shadow-sm text-center">
         <div class="card-body py-2">
-          <div class="text-muted small">Assigned</div>
+          <div class="text-muted small">{{ _("Assigned") }}</div>
           <div class="fs-2 fw-semibold">{{ summary.assigned }}</div>
         </div>
       </div>
@@ -70,7 +70,7 @@ priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
     <div class="col">
       <div class="card shadow-sm text-center">
         <div class="card-body py-2">
-          <div class="text-muted small">Resolved</div>
+          <div class="text-muted small">{{ _("Resolved") }}</div>
           <div class="fs-2 fw-semibold">{{ summary.resolved }}</div>
         </div>
       </div>
@@ -78,7 +78,7 @@ priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
     <div class="col">
       <div class="card shadow-sm text-center">
         <div class="card-body py-2">
-          <div class="text-muted small">Closed</div>
+          <div class="text-muted small">{{ _("Closed") }}</div>
           <div class="fs-2 fw-semibold">{{ summary.closed }}</div>
         </div>
       </div>
@@ -88,12 +88,12 @@ priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
   <div class="row g-3 mb-3">
     <div class="col-md-4">
       <div class="card shadow-sm">
-        <div class="card-header">By category</div>
+        <div class="card-header">{{ _("By category") }}</div>
         <table class="table mb-0">
           <tbody>
             {% for name, count in summary.by_category.items() %}
             <tr>
-              <td>{{ name }}</td>
+              <td>{{ category_label(name) }}</td>
               <td class="text-end">{{ count }}</td>
             </tr>
             {% endfor %}
@@ -103,12 +103,12 @@ priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
     </div>
     <div class="col-md-4">
       <div class="card shadow-sm">
-        <div class="card-header">By priority</div>
+        <div class="card-header">{{ _("By priority") }}</div>
         <table class="table mb-0">
           <tbody>
             {% for name, count in summary.by_priority.items() %}
             <tr>
-              <td>{{ name }}</td>
+              <td>{{ priority_label(name) }}</td>
               <td class="text-end">{{ count }}</td>
             </tr>
             {% endfor %}
@@ -118,10 +118,10 @@ priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
     </div>
     <div class="col-md-4">
       <div class="card shadow-sm">
-        <div class="card-header">Needs attention</div>
+        <div class="card-header">{{ _("Needs attention") }}</div>
         <ul class="list-group list-group-flush">
           <li class="list-group-item d-flex justify-content-between">
-            Oldest unassigned ticket
+            {{ _("Oldest unassigned ticket") }}
             <span>
               {{ summary.oldest_unassigned.strftime("%Y-%m-%d %H:%M") if summary.oldest_unassigned
               else "—" }}
@@ -138,14 +138,14 @@ priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
       <thead>
         <tr>
           <th>#</th>
-          <th>Subject</th>
-          <th>Status</th>
-          <th>Category</th>
-          <th>Priority</th>
-          <th>Requester</th>
-          <th>Department</th>
-          <th>Assignee</th>
-          <th>Created</th>
+          <th>{{ _("Subject") }}</th>
+          <th>{{ _("Status") }}</th>
+          <th>{{ _("Category") }}</th>
+          <th>{{ _("Priority") }}</th>
+          <th>{{ _("Requester") }}</th>
+          <th>{{ _("Department") }}</th>
+          <th>{{ _("Assignee") }}</th>
+          <th>{{ _("Created") }}</th>
         </tr>
       </thead>
       <tbody>
@@ -176,7 +176,7 @@ priority_badge %} {% block title %}Reports{% endblock %} {% block content %}
     </table>
   </div>
   {% else %}
-  <div class="card card-body shadow-sm text-muted">No tickets match the current filters.</div>
+  <div class="card card-body shadow-sm text-muted">{{ _("No tickets match the current filters.") }}</div>
   {% endif %}
 </div>
 {% endblock %}

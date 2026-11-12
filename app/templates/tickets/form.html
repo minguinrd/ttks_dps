@@ -1,41 +1,33 @@
-{% extends "base.html" %} {% block title %}New Ticket{% endblock %} {% block content %}
+{% extends "base.html" %} {% from "macros/forms.html" import field_label, field_errors %} {% block title %}{{ _("New Ticket") }}{% endblock %} {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-8 col-lg-6">
-    <h1 class="h4 mb-3">New ticket</h1>
+    <h1 class="h4 mb-3">{{ _("New ticket") }}</h1>
     <form method="post" novalidate>
       {{ form.hidden_tag() }}
       <div class="mb-3">
-        {{ form.subject.label(class_="form-label") }} {{
-        form.subject(class_="form-control" + (" is-invalid" if form.subject.errors else "")) }} {%
-        for error in form.subject.errors %}
-        <div class="invalid-feedback d-block">{{ error }}</div>
-        {% endfor %}
+        {{ field_label(form.subject) }} {{
+        form.subject(class_="form-control" + (" is-invalid" if form.subject.errors else "")) }}
+        {{ field_errors(form.subject) }}
       </div>
       <div class="mb-3">
-        {{ form.description.label(class_="form-label") }} {{
-        form.description(class_="form-control" + (" is-invalid" if form.description.errors else
-        ""), rows="6") }} {% for error in form.description.errors %}
-        <div class="invalid-feedback d-block">{{ error }}</div>
-        {% endfor %}
+        {{ field_label(form.description) }} {{
+        form.description(class_="form-control" + (" is-invalid" if form.description.errors else ""),
+        rows="6") }} {{ field_errors(form.description) }}
       </div>
       <div class="row">
         <div class="col-md-6 mb-3">
-          {{ form.category.label(class_="form-label") }} {{
+          {{ field_label(form.category) }} {{
           form.category(class_="form-select" + (" is-invalid" if form.category.errors else "")) }}
-          {% for error in form.category.errors %}
-          <div class="invalid-feedback d-block">{{ error }}</div>
-          {% endfor %}
+          {{ field_errors(form.category) }}
         </div>
         <div class="col-md-6 mb-3">
-          {{ form.priority.label(class_="form-label") }} {{
+          {{ field_label(form.priority) }} {{
           form.priority(class_="form-select" + (" is-invalid" if form.priority.errors else "")) }}
-          {% for error in form.priority.errors %}
-          <div class="invalid-feedback d-block">{{ error }}</div>
-          {% endfor %}
+          {{ field_errors(form.priority) }}
         </div>
       </div>
-      <button type="submit" class="btn btn-primary">Create ticket</button>
-      <a class="btn btn-outline-secondary" href="{{ url_for('tickets.mine') }}">Cancel</a>
+      <button type="submit" class="btn btn-primary">{{ _("Create ticket") }}</button>
+      <a class="btn btn-outline-secondary" href="{{ url_for('tickets.mine') }}">{{ _("Cancel") }}</a>
     </form>
   </div>
 </div>

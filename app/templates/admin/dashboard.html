@@ -1,12 +1,12 @@
-{% extends "base.html" %} {% block title %}Admin{% endblock %} {% block content %}
-<h1 class="h4 mb-3">Admin Dashboard</h1>
+{% extends "base.html" %} {% from "macros/badges.html" import category_label, priority_label %} {% block title %}{{ _("Admin") }}{% endblock %} {% block content %}
+<h1 class="h4 mb-3">{{ _("Admin Dashboard") }}</h1>
 
 <div class="row g-3 mb-4">
   <div class="col-md-3">
     <div class="card shadow-sm text-center">
       <div class="card-body">
         <div class="fs-2 fw-semibold">{{ stats.open }}</div>
-        <div class="text-muted">Open tickets</div>
+        <div class="text-muted">{{ _("Open tickets") }}</div>
       </div>
     </div>
   </div>
@@ -14,7 +14,7 @@
     <div class="card shadow-sm text-center">
       <div class="card-body">
         <div class="fs-2 fw-semibold">{{ stats.assigned }}</div>
-        <div class="text-muted">Assigned tickets</div>
+        <div class="text-muted">{{ _("Assigned tickets") }}</div>
       </div>
     </div>
   </div>
@@ -22,7 +22,7 @@
     <div class="card shadow-sm text-center">
       <div class="card-body">
         <div class="fs-2 fw-semibold">{{ stats.resolved_this_week }}</div>
-        <div class="text-muted">Resolved this week</div>
+        <div class="text-muted">{{ _("Resolved this week") }}</div>
       </div>
     </div>
   </div>
@@ -30,9 +30,9 @@
     <div class="card shadow-sm text-center">
       <div class="card-body">
         <div class="fs-2 fw-semibold">{{ stats.pending_users }}</div>
-        <div class="text-muted">Pending users</div>
+        <div class="text-muted">{{ _("Pending users") }}</div>
         {% if stats.pending_users %}
-        <a class="small" href="{{ url_for('admin.users', status='pending') }}">Review</a>
+        <a class="small" href="{{ url_for('admin.users', status='pending') }}">{{ _("Review") }}</a>
         {% endif %}
       </div>
     </div>
@@ -42,12 +42,12 @@
 <div class="row g-3">
   <div class="col-md-4">
     <div class="card shadow-sm">
-      <div class="card-header">By category</div>
+      <div class="card-header">{{ _("By category") }}</div>
       <table class="table mb-0">
         <tbody>
           {% for name, count in stats.by_category.items() %}
           <tr>
-            <td>{{ name }}</td>
+            <td>{{ category_label(name) }}</td>
             <td class="text-end">{{ count }}</td>
           </tr>
           {% endfor %}
@@ -57,12 +57,12 @@
   </div>
   <div class="col-md-4">
     <div class="card shadow-sm">
-      <div class="card-header">By priority</div>
+      <div class="card-header">{{ _("By priority") }}</div>
       <table class="table mb-0">
         <tbody>
           {% for name, count in stats.by_priority.items() %}
           <tr>
-            <td>{{ name }}</td>
+            <td>{{ priority_label(name) }}</td>
             <td class="text-end">{{ count }}</td>
           </tr>
           {% endfor %}
@@ -72,14 +72,14 @@
   </div>
   <div class="col-md-4">
     <div class="card shadow-sm">
-      <div class="card-header">Needs attention</div>
+      <div class="card-header">{{ _("Needs attention") }}</div>
       <ul class="list-group list-group-flush">
         <li class="list-group-item d-flex justify-content-between">
-          Oldest unassigned ticket
+          {{ _("Oldest unassigned ticket") }}
           <span>{{ stats.oldest_unassigned or "—" }}</span>
         </li>
         <li class="list-group-item d-flex justify-content-between">
-          Tickets with a stale assignee
+          {{ _("Tickets with a stale assignee") }}
           <span>{{ stats.stale_assignee }}</span>
         </li>
       </ul>
@@ -88,7 +88,7 @@
 </div>
 
 <div class="mt-3">
-  <a class="btn btn-outline-primary" href="{{ url_for('admin.users') }}">Manage users</a>
-  <a class="btn btn-outline-primary" href="{{ url_for('admin.departments') }}">Manage departments</a>
+  <a class="btn btn-outline-primary" href="{{ url_for('admin.users') }}">{{ _("Manage users") }}</a>
+  <a class="btn btn-outline-primary" href="{{ url_for('admin.departments') }}">{{ _("Manage departments") }}</a>
 </div>
 {% endblock %}

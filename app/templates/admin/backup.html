@@ -1,9 +1,9 @@
-{% extends "base.html" %} {% block title %}Backups{% endblock %} {% block content %}
+{% extends "base.html" %} {% block title %}{{ _("Backups") }}{% endblock %} {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h4 mb-0">Backups</h1>
+  <h1 class="h4 mb-0">{{ _("Backups") }}</h1>
   <form method="post" action="{{ url_for('admin.backup_create') }}" class="no-print">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-    <button type="submit" class="btn btn-primary">Back up now</button>
+    <button type="submit" class="btn btn-primary">{{ _("Back up now") }}</button>
   </form>
 </div>
 
@@ -12,9 +12,9 @@
   <table class="table table-hover align-middle mb-0">
     <thead>
       <tr>
-        <th>File</th>
-        <th>Size (bytes)</th>
-        <th>Created</th>
+        <th>{{ _("File") }}</th>
+        <th>{{ _("Size (bytes)") }}</th>
+        <th>{{ _("Created") }}</th>
         <th class="no-print"></th>
       </tr>
     </thead>
@@ -28,7 +28,7 @@
           <a
             class="btn btn-outline-secondary btn-sm no-print"
             href="{{ url_for('admin.backup_download', name=backup.name) }}"
-            >Download</a
+            >{{ _("Download") }}</a
           >
         </td>
       </tr>
@@ -37,6 +37,6 @@
   </table>
 </div>
 {% else %}
-<div class="alert alert-secondary">No backups yet.</div>
+<div class="alert alert-secondary">{{ _("No backups yet.") }}</div>
 {% endif %}
 {% endblock %}

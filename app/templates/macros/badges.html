@@ -1,9 +1,26 @@
-{% macro status_badge(status) %}
+{# Fixed enum labels (status/priority/category/role) — the one choke point for
+   the words attached to stored enum values. Keys are the raw enum values, so
+   English rendering stays byte-identical; unknown values (e.g. anything
+   outside the enums) pass through raw. Department names are admin-entered
+   data and are never translated — render them directly. #}
+{% macro status_label(value) %}
+{%- set labels = {"open": _("open"), "assigned": _("assigned"), "resolved": _("resolved"), "closed": _("closed")} -%}
+{{- labels.get(value, value) -}}
+{%- endmacro %} {% macro category_label(value) %}
+{%- set labels = {"hardware": _("hardware"), "software": _("software"), "network": _("network"), "access": _("access"), "other": _("other")} -%}
+{{- labels.get(value, value) -}}
+{%- endmacro %} {% macro priority_label(value) %}
+{%- set labels = {"low": _("low"), "normal": _("normal"), "high": _("high"), "urgent": _("urgent")} -%}
+{{- labels.get(value, value) -}}
+{%- endmacro %} {% macro role_label(value) %}
+{%- set labels = {"user": _("user"), "agent": _("agent"), "admin": _("admin")} -%}
+{{- labels.get(value, value) -}}
+{%- endmacro %} {% macro status_badge(status) %}
 {%- set colors = {"open": "secondary", "assigned": "primary", "resolved": "success", "closed": "dark"} -%}
-<span class="badge text-bg-{{ colors.get(status, 'secondary') }}">{{ status }}</span>
+<span class="badge text-bg-{{ colors.get(status, 'secondary') }}">{{ status_label(status) }}</span>
 {%- endmacro %} {% macro category_badge(category) %}
-<span class="badge text-bg-info">{{ category }}</span>
+<span class="badge text-bg-info">{{ category_label(category) }}</span>
 {%- endmacro %} {% macro priority_badge(priority) %}
 {%- set colors = {"low": "light", "normal": "secondary", "high": "warning", "urgent": "danger"} -%}
-<span class="badge text-bg-{{ colors.get(priority, 'secondary') }}">{{ priority }}</span>
+<span class="badge text-bg-{{ colors.get(priority, 'secondary') }}">{{ priority_label(priority) }}</span>
 {%- endmacro %}
