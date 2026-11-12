@@ -62,6 +62,12 @@ def test_branding_db_error_not_silent(app, db_schema, monkeypatch):
 
         return _get
 
+    def raise_operational_raw(statement, orig):
+        def _get(*args, **kwargs):
+            raise OperationalError(statement, None, orig)
+
+        return _get
+
     with app.app_context():
         monkeypatch.setattr(db.session, "get", raise_operational("no such table: settings"))
         assert get_branding() == {
@@ -81,6 +87,25 @@ def test_branding_db_error_not_silent(app, db_schema, monkeypatch):
             get_branding()
         monkeypatch.setattr(db.session, "get", raise_no_such_table("settings archive"))
         with pytest.raises(OperationalError, match="no such table: settings archive"):
+            get_branding()
+
+        # SQL text is not an error message: the statement must never be searched,
+        # so a comment like ``-- no such table: settings`` cannot swallow the
+        # error (nor can such wording smuggled anywhere outside the DBAPI
+        # orig message).
+        monkeypatch.setattr(
+            db.session,
+            "get",
+            raise_operational_raw("SELECT 1 -- no such table: settings", None),
+        )
+        with pytest.raises(OperationalError):
+            get_branding()
+        monkeypatch.setattr(
+            db.session,
+            "get",
+            raise_operational_raw("boom", "SELECT 1 -- no such table: settings"),
+        )
+        with pytest.raises(OperationalError):
             get_branding()
 
 

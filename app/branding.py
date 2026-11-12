@@ -22,17 +22,19 @@ _TABLE_NAME = re.compile(
 def _is_missing_settings_table(exc: OperationalError) -> bool:
     """True only for EXACTLY SQLite's ``no such table: settings`` (un-migrated DB).
 
-    The table name is compared exactly, so ``no such table`` for any other
-    table (``settings-archive``, ``settings archive``, ...) re-raises, as does
-    every other OperationalError (locks, I/O). The message is taken from the
-    original DBAPI error (``exc.orig``) — ``str(exc)`` appends ``[SQL: ...]``
-    noise — falling back to the statement for errors raised without an orig.
+    Matches against ``exc.orig`` alone — the DBAPI error message, where SQLite
+    puts the wording. ``exc.statement`` is SQL text and is never searched: a
+    comment like ``-- no such table: settings`` there must not swallow an
+    unrelated error. The whole message must be the no-such-table wording
+    (``fullmatch``), and the table name is compared exactly, so ``no such
+    table`` for any other table (``settings-archive``, ``settings archive``,
+    ...) re-raises, as does every other OperationalError (locks, I/O). An
+    error without ``orig`` is an unrecognized shape and propagates (fail loud).
     """
-    raw = exc.orig if exc.orig is not None else exc.statement
-    if raw is None:
+    if exc.orig is None:
         return False
-    message = re.sub(r"\s+", " ", str(raw)).strip().lower()
-    match = _TABLE_NAME.search(message)
+    message = re.sub(r"\s+", " ", str(exc.orig)).strip().lower()
+    match = _TABLE_NAME.fullmatch(message)
     return match is not None and match.group("name").strip("\"'`") == "settings"
 
 
