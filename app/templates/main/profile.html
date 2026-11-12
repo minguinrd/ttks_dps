@@ -1,30 +1,42 @@
-{% extends "base.html" %} {% block title %}Profile{% endblock %} {% block content %}
+{% extends "base.html" %} {% block title %}{{ _("Profile") }}{% endblock %} {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-8 col-lg-6">
-    <h1 class="h4 mb-3">Profile</h1>
+    <h1 class="h4 mb-3">{{ _("Profile") }}</h1>
+    <form method="post" action="{{ url_for('main.language_save') }}" novalidate>
+      {{ language_form.hidden_tag() }}
+      <div class="mb-3">
+        {{ language_form.language.label(class_="form-label", text=_("Language")) }} {{
+        language_form.language(class_="form-select") }} {% for error in
+        language_form.language.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {{ language_form.submit(class_="btn btn-primary", value=_("Save")) }}
+    </form>
+    <hr class="my-4" />
     <form method="post" action="{{ url_for('main.profile') }}" novalidate>
       {{ form.hidden_tag() }}
       <div class="mb-3">
-        {{ form.full_name.label(class_="form-label") }} {{
+        {{ form.full_name.label(class_="form-label", text=_("Full name")) }} {{
         form.full_name(class_="form-control" + (" is-invalid" if form.full_name.errors else "")) }}
         {% for error in form.full_name.errors %}
         <div class="invalid-feedback d-block">{{ error }}</div>
         {% endfor %}
       </div>
       <div class="mb-3">
-        {{ form.email.label(class_="form-label") }} {{
+        {{ form.email.label(class_="form-label", text=_("Email")) }} {{
         form.email(class_="form-control" + (" is-invalid" if form.email.errors else "")) }} {% for
         error in form.email.errors %}
         <div class="invalid-feedback d-block">{{ error }}</div>
         {% endfor %}
       </div>
-      {{ form.submit(class_="btn btn-primary") }}
+      {{ form.submit(class_="btn btn-primary", value=_("Save")) }}
       <a class="btn btn-outline-secondary" href="{{ url_for('main.profile_password') }}"
-        >Change password</a
+        >{{ _("Change password") }}</a
       >
     </form>
     <hr class="my-4" />
-    <h2 class="h5 mb-3">Profile picture</h2>
+    <h2 class="h5 mb-3">{{ _("Profile picture") }}</h2>
     <form
       method="post"
       action="{{ url_for('main.avatar_upload') }}"
@@ -33,14 +45,14 @@
     >
       {{ avatar_form.hidden_tag() }}
       <div class="mb-3">
-        {{ avatar_form.avatar.label(class_="form-label") }} {{
+        {{ avatar_form.avatar.label(class_="form-label", text=_("Avatar")) }} {{
         avatar_form.avatar(class_="form-control" + (" is-invalid" if avatar_form.avatar.errors else
         "")) }}
         {% for error in avatar_form.avatar.errors %}
         <div class="invalid-feedback d-block">{{ error }}</div>
         {% endfor %}
       </div>
-      {{ avatar_form.submit(class_="btn btn-primary") }}
+      {{ avatar_form.submit(class_="btn btn-primary", value=_("Upload")) }}
     </form>
   </div>
 </div>

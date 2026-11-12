@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, flash, redirect, request, url_for
+from flask import Flask, flash, g, redirect, request, url_for
 from flask_login import current_user
 from werkzeug.exceptions import RequestEntityTooLarge
 
@@ -14,6 +14,7 @@ from app.branding import get_branding
 from app.cli import restore_backup, seed_admin
 from app.config import Config
 from app.extensions import csrf, db, login_manager, migrate, oauth
+from app.i18n import SUPPORTED, translate
 from app.main import main_bp
 from app.main.routes import avatar_upload_error_response, branding_upload_error_response
 from app.notifications import unread_count
@@ -83,6 +84,22 @@ def create_app(config: dict | None = None) -> Flask:
                 app.config["GOOGLE_CLIENT_ID"] and app.config["GOOGLE_CLIENT_SECRET"]
             )
         }
+
+    # ``_`` resolves the locale per request (translate reads ``g.locale`` at
+    # call time), so it must never be bound to a locale at import time.
+    app.jinja_env.globals["_"] = lambda s, **kw: translate(s, **kw)
+
+    @app.before_request
+    def set_request_locale():
+        # Display language for this request (app.i18n reads g.locale). Anonymous
+        # users always get English — no browser detection. Static files skip the
+        # work entirely; nothing template-rendered ever runs for them.
+        if request.endpoint == "static":
+            return
+        if current_user.is_authenticated and current_user.language in SUPPORTED:
+            g.locale = current_user.language
+        else:
+            g.locale = "en"
 
     @app.before_request
     def force_password_change():

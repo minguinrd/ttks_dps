@@ -16,8 +16,15 @@ from flask_login import current_user, login_required
 from app.admin.forms import LOGO_TOO_LARGE_ERROR, BrandingForm
 from app.branding import get_branding, get_setting
 from app.extensions import db
+from app.i18n import SUPPORTED
 from app.main import main_bp
-from app.main.forms import AVATAR_TOO_LARGE_ERROR, AvatarForm, ChangePasswordForm, ProfileForm
+from app.main.forms import (
+    AVATAR_TOO_LARGE_ERROR,
+    AvatarForm,
+    ChangePasswordForm,
+    LanguageForm,
+    ProfileForm,
+)
 from app.models import Notification, Role, User
 
 LOGO_MIME_TYPES = {
@@ -86,7 +93,12 @@ def profile():
         db.session.commit()
         flash("Profile updated.", "success")
         return redirect(url_for("main.profile"))
-    return render_template("main/profile.html", form=form, avatar_form=AvatarForm())
+    return render_template(
+        "main/profile.html",
+        form=form,
+        avatar_form=AvatarForm(),
+        language_form=LanguageForm(formdata=None, obj=current_user),
+    )
 
 
 @main_bp.route("/profile/password", methods=["GET", "POST"])
@@ -100,6 +112,20 @@ def profile_password():
         flash("Password changed.", "success")
         return redirect(url_for("main.index"))
     return render_template("main/profile_password.html", form=form)
+
+
+@main_bp.route("/profile/language", methods=["POST"])
+@login_required
+def language_save():
+    form = LanguageForm()
+    if form.validate_on_submit() and form.language.data in SUPPORTED:
+        current_user.language = form.language.data
+        db.session.commit()
+        flash("Language updated.", "success")
+        return redirect(url_for("main.profile"))
+    if not form.language.errors:
+        form.language.errors = ["Not a valid choice."]
+    return _render_profile(AvatarForm(), language_form=form)
 
 
 @main_bp.route("/profile/avatar", methods=["POST"])
@@ -146,12 +172,15 @@ def branding_logo():
     return send_file(path, mimetype=mimetype)
 
 
-def _render_profile(avatar_form):
+def _render_profile(avatar_form, language_form=None):
     """Render the profile page; the profile form is display-only here (no request body)."""
+    if language_form is None:
+        language_form = LanguageForm(formdata=None, obj=current_user)
     return render_template(
         "main/profile.html",
         form=ProfileForm(formdata=None, obj=current_user),
         avatar_form=avatar_form,
+        language_form=language_form,
     )
 
 

@@ -5,7 +5,7 @@ from flask import current_app
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired
-from wtforms import PasswordField, StringField, SubmitField
+from wtforms import PasswordField, SelectField, StringField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 
 AVATAR_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
@@ -15,6 +15,14 @@ AVATAR_TOO_LARGE_ERROR = "File too large (max 2 MB)."
 class ProfileForm(FlaskForm):
     full_name = StringField("Full name", validators=[DataRequired(), Length(max=120)])
     email = StringField("Email", validators=[DataRequired(), Email(), Length(max=255)])
+    submit = SubmitField("Save")
+
+
+class LanguageForm(FlaskForm):
+    language = SelectField(
+        choices=[("en", "English"), ("es", "Español")],
+        validators=[DataRequired()],
+    )
     submit = SubmitField("Save")
 
 
