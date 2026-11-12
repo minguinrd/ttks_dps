@@ -64,7 +64,7 @@ def test_upgrade_with_child_rows(tmp_path):
     assert result.exit_code == 0, result.output
     _seed_child_rows(_db_path(app))
 
-    result = _upgrade(app)  # to head: add google_sub
+    result = _upgrade(app)  # to head: add google_sub + settings
     assert result.exit_code == 0, f"{result.output}{result.exception!r}"
 
     conn = sqlite3.connect(_db_path(app))
@@ -73,7 +73,7 @@ def test_upgrade_with_child_rows(tmp_path):
     assert conn.execute("SELECT count(*) FROM users").fetchone()[0] == 1
     assert conn.execute("SELECT count(*) FROM tickets").fetchone()[0] == 1
     version = conn.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-    assert version == "ce6a0d11b9f5"
+    assert version == "d4a96c4e1cae"
     conn.close()
 
 

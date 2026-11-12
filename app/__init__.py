@@ -10,6 +10,7 @@ from app import (
 )
 from app.admin import admin_bp
 from app.auth import auth_bp
+from app.branding import get_branding
 from app.cli import restore_backup, seed_admin
 from app.config import Config
 from app.extensions import csrf, db, login_manager, migrate, oauth
@@ -63,6 +64,11 @@ def create_app(config: dict | None = None) -> Flask:
 
     app.cli.add_command(seed_admin)
     app.cli.add_command(restore_backup)
+
+    @app.context_processor
+    def inject_branding():
+        # Deploy-wide branding (site name, accent color, logo) for every template.
+        return {"branding": get_branding()}
 
     @app.context_processor
     def inject_notification_helpers():
