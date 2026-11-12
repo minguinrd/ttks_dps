@@ -32,6 +32,9 @@ def test_default_data_dir_is_absolute_and_connectable(monkeypatch, tmp_path):
         with monkeypatch.context() as m:
             m.chdir(tmp_path)
             m.delenv("DATA_DIR", raising=False)
+            # This app is created without TESTING, so create_app would start the
+            # real backup scheduler thread; keep the suite thread-free.
+            m.setattr("app.backup.start_scheduler", lambda application: None)
             importlib.reload(app_config)
             importlib.reload(app_pkg)
 

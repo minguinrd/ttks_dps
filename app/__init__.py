@@ -4,7 +4,10 @@ from flask import Flask, flash, redirect, request, url_for
 from flask_login import current_user
 from werkzeug.exceptions import RequestEntityTooLarge
 
-from app import models  # noqa: F401  # register ORM mappers so Flask-Migrate can autogenerate
+from app import (
+    backup,
+    models,  # noqa: F401  # register ORM mappers so Flask-Migrate can autogenerate
+)
 from app.admin import admin_bp
 from app.auth import auth_bp
 from app.cli import seed_admin
@@ -52,6 +55,11 @@ def create_app(config: dict | None = None) -> Flask:
     app.register_blueprint(tickets_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(admin_bp)
+
+    # Daily backup scheduler (app/backup.py). Never while testing: the test
+    # suite must not spawn its thread (see tests/test_scaffold.py).
+    if not app.testing:
+        backup.start_scheduler(app)
 
     app.cli.add_command(seed_admin)
 

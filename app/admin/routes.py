@@ -1,10 +1,13 @@
+import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
-from flask import abort, flash, redirect, render_template, request, url_for
+from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 
 from app.admin import admin_bp
 from app.admin.forms import AdminUserForm, DepartmentForm, ResetPasswordForm
+from app.backup import run_backup_cycle
 from app.extensions import db
 from app.models import Category, Department, Priority, Role, Ticket, TicketStatus, User
 from app.permissions import role_required
@@ -237,6 +240,51 @@ def department_edit(department_id):
     if not form.is_submitted():
         form.name.data = department.name
     return render_template("admin/department_edit.html", form=form, department=department)
+
+
+@admin_bp.route("/backup")
+@login_required
+@role_required("admin")
+def backup_page():
+    backup_dir = Path(current_app.config["BACKUP_DIR"])
+    files = sorted(backup_dir.glob("ttks_dps-*.db"), reverse=True)
+    return render_template(
+        "admin/backup.html",
+        backups=[
+            {
+                "name": path.name,
+                "size": path.stat().st_size,
+                "mtime": datetime.fromtimestamp(path.stat().st_mtime),
+            }
+            for path in files
+        ],
+    )
+
+
+@admin_bp.route("/backup/create", methods=["POST"])
+@login_required
+@role_required("admin")
+def backup_create():
+    path = run_backup_cycle()
+    flash(f"Backup created: {path.name}", "success")
+    return redirect(url_for("admin.backup_page"))
+
+
+@admin_bp.route("/backup/<name>/download")
+@login_required
+@role_required("admin")
+def backup_download(name):
+    # Traversal guard: only exactly named backup files, and after resolving
+    # symlinks/".." the target must still sit directly inside BACKUP_DIR.
+    if not re.fullmatch(r"ttks_dps-\d{8}-\d{6}\.db", name):
+        abort(404)
+    backup_dir = Path(current_app.config["BACKUP_DIR"])
+    target = (backup_dir / name).resolve()
+    if target.parent != backup_dir.resolve():
+        abort(404)
+    if not target.is_file():
+        abort(404)
+    return send_file(target, as_attachment=True)
 
 
 def _user_or_404(user_id: int) -> User:

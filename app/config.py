@@ -16,6 +16,11 @@ class Config:
     # convention). Both must be non-empty to enable the button and routes.
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+    # Daily SQLite backups (app/backup.py): run at BACKUP_HOUR ("HH:MM", local
+    # time), keep the newest BACKUP_KEEP files in BACKUP_DIR.
+    BACKUP_HOUR = os.environ.get("BACKUP_HOUR", "03:00")
+    BACKUP_KEEP = int(os.environ.get("BACKUP_KEEP", "7"))
+    BACKUP_DIR = os.path.join(DATA_DIR, "backups")
 
 
 class TestConfig(Config):

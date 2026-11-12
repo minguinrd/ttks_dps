@@ -1,0 +1,42 @@
+{% extends "base.html" %} {% block title %}Backups{% endblock %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Backups</h1>
+  <form method="post" action="{{ url_for('admin.backup_create') }}" class="no-print">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <button type="submit" class="btn btn-primary">Back up now</button>
+  </form>
+</div>
+
+{% if backups %}
+<div class="card shadow-sm">
+  <table class="table table-hover align-middle mb-0">
+    <thead>
+      <tr>
+        <th>File</th>
+        <th>Size (bytes)</th>
+        <th>Created</th>
+        <th class="no-print"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for backup in backups %}
+      <tr>
+        <td>{{ backup.name }}</td>
+        <td>{{ backup.size }}</td>
+        <td>{{ backup.mtime.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        <td class="text-end">
+          <a
+            class="btn btn-outline-secondary btn-sm no-print"
+            href="{{ url_for('admin.backup_download', name=backup.name) }}"
+            >Download</a
+          >
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-secondary">No backups yet.</div>
+{% endif %}
+{% endblock %}
