@@ -131,6 +131,16 @@ def test_restore_cleans_wal_sidecars(tmp_path):
     assert not shm.exists()
 
 
+def test_restore_missing_argument_fails(tmp_path):
+    app = _fresh_app(tmp_path)
+    _schema(app)
+
+    result = app.test_cli_runner().invoke(args=["restore-backup"])
+
+    assert result.exit_code == 1
+    assert "backup file" in result.output
+
+
 def test_restore_missing_file_fails(tmp_path):
     app = _fresh_app(tmp_path)
     _schema(app)

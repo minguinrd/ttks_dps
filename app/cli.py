@@ -34,14 +34,16 @@ def seed_admin() -> None:
 
 
 @click.command("restore-backup")
-@click.argument("path", type=click.Path(exists=False))
+@click.argument("path", type=click.Path(exists=False), required=False)
 @with_appcontext
-def restore_backup(path: str) -> None:
+def restore_backup(path: str | None) -> None:
     """Restore the live SQLite database from the backup file at PATH.
 
     Runs an integrity check first, keeps a safety copy of the current
     database, swaps the backup in, and clears stale WAL sidecar files.
     """
+    if path is None:
+        raise click.ClickException("missing backup file path")
     source = Path(path)
     if not source.is_file():
         raise click.ClickException(f"backup file not found: {path}")
