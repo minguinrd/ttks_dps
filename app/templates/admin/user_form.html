@@ -2,70 +2,79 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-8 col-lg-6">
-    <h1 class="h4 mb-3">{{ _("Edit user: {username}").format(username=user.username) if user else _("New user") }}</h1>
-    <form method="post" novalidate>
-      {{ form.hidden_tag() }}
-      <div class="mb-3">
-        {{ field_label(form.username) }} {% if user %}
-        {# The username is fixed once the account exists. #}
-        {{ form.username(class_="form-control", readonly=true) }} {% else %}
-        {{ form.username(class_="form-control" + (" is-invalid" if form.username.errors else "")) }}
-        {{ field_errors(form.username) }} {% endif %}
-      </div>
-      <div class="mb-3">
-        {{ field_label(form.full_name) }} {{
-        form.full_name(class_="form-control" + (" is-invalid" if form.full_name.errors else "")) }}
-        {{ field_errors(form.full_name) }}
-      </div>
-      <div class="mb-3">
-        {{ field_label(form.email) }} {{
-        form.email(class_="form-control" + (" is-invalid" if form.email.errors else "")) }}
-        {{ field_errors(form.email) }}
-      </div>
-      <div class="mb-3">
-        {{ field_label(form.role) }} {{ form.role(class_="form-select") }}
-      </div>
-      <div class="mb-3">
-        {{ field_label(form.department) }} {{
-        form.department(class_="form-select" + (" is-invalid" if form.department.errors else "")) }}
-        {{ field_errors(form.department) }}
-      </div>
-      {% if not user %}
-      <div class="mb-3">
-        {{ field_label(form.initial_password) }} {{
-        form.initial_password(class_="form-control" + (" is-invalid" if
-        form.initial_password.errors else "")) }}
-        <div class="form-text">{{ _("The user must change this password on first login.") }}</div>
-        {{ field_errors(form.initial_password) }}
-      </div>
-      {% endif %}
-      {{ form.submit(class_="btn btn-primary", value=_(form.submit.label.text)) }}
-      <a class="btn btn-outline-secondary" href="{{ url_for('admin.users') }}">{{ _("Cancel") }}</a>
-    </form>
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">{{ _("Edit user: {username}").format(username=user.username) if user else _("New user") }}</h1>
+        <form method="post" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            {{ field_label(form.username) }} {% if user %}
+            {# The username is fixed once the account exists. #}
+            {{ form.username(class_="form-control", readonly=true) }} {% else %}
+            {{ form.username(class_="form-control" + (" is-invalid" if form.username.errors else "")) }}
+            {{ field_errors(form.username) }} {% endif %}
+          </div>
+          <div class="mb-3">
+            {{ field_label(form.full_name) }}
+            {{ form.full_name(class_="form-control" + (" is-invalid" if form.full_name.errors else "")) }}
+            {{ field_errors(form.full_name) }}
+          </div>
+          <div class="mb-3">
+            {{ field_label(form.email) }}
+            {{ form.email(class_="form-control" + (" is-invalid" if form.email.errors else "")) }}
+            {{ field_errors(form.email) }}
+          </div>
+          <div class="mb-3">
+            {{ field_label(form.role) }} {{ form.role(class_="form-select") }}
+          </div>
+          <div class="mb-3">
+            {{ field_label(form.department) }}
+            {{ form.department(class_="form-select" + (" is-invalid" if form.department.errors else "")) }}
+            {{ field_errors(form.department) }}
+          </div>
+          {% if not user %}
+          <div class="mb-3">
+            {{ field_label(form.initial_password) }}
+            {{ form.initial_password(class_="form-control" + (" is-invalid" if form.initial_password.errors else "")) }}
+            <div class="form-text">{{ _("The user must change this password on first login.") }}</div>
+            {{ field_errors(form.initial_password) }}
+          </div>
+          {% endif %}
+          <button type="submit" class="btn btn-primary">
+            <i class="ph ph-floppy-disk" aria-hidden="true"></i>{{ _(form.submit.label.text) }}
+          </button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('admin.users') }}"
+            ><i class="ph ph-arrow-left" aria-hidden="true"></i>{{ _("Cancel") }}</a
+          >
+        </form>
 
-    {% if user %}
-    <hr class="my-4" />
-    <h2 class="h5 mb-3">{{ _("Reset password") }}</h2>
-    <form
-      method="post"
-      action="{{ url_for('admin.user_reset_password', user_id=user.id) }}"
-      novalidate
-      data-confirm="{{ _("Reset this password? The user must set a new one on next login.") }}"
-    >
-      {{ reset_form.hidden_tag() }}
-      <div class="mb-3">
-        {{ field_label(reset_form.new_password) }} {{
-        reset_form.new_password(class_="form-control" + (" is-invalid" if
-        reset_form.new_password.errors else "")) }} {{ field_errors(reset_form.new_password) }}
+        {% if user %}
+        <hr class="my-4" />
+        <h2 class="h5 mb-3">{{ _("Reset password") }}</h2>
+        <form
+          method="post"
+          action="{{ url_for('admin.user_reset_password', user_id=user.id) }}"
+          novalidate
+          data-confirm="{{ _("Reset this password? The user must set a new one on next login.") }}"
+        >
+          {{ reset_form.hidden_tag() }}
+          <div class="mb-3">
+            {{ field_label(reset_form.new_password) }}
+            {{ reset_form.new_password(class_="form-control" + (" is-invalid" if reset_form.new_password.errors else "")) }}
+            {{ field_errors(reset_form.new_password) }}
+          </div>
+          <div class="mb-3">
+            {{ field_label(reset_form.confirm) }}
+            {{ reset_form.confirm(class_="form-control" + (" is-invalid" if reset_form.confirm.errors else "")) }}
+            {{ field_errors(reset_form.confirm) }}
+          </div>
+          <button type="submit" class="btn btn-danger">
+            <i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>{{ _(reset_form.submit.label.text) }}
+          </button>
+        </form>
+        {% endif %}
       </div>
-      <div class="mb-3">
-        {{ field_label(reset_form.confirm) }} {{
-        reset_form.confirm(class_="form-control" + (" is-invalid" if reset_form.confirm.errors else
-        "")) }} {{ field_errors(reset_form.confirm) }}
-      </div>
-      {{ reset_form.submit(class_="btn btn-danger", value=_(reset_form.submit.label.text)) }}
-    </form>
-    {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}

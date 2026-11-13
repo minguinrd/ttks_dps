@@ -10,14 +10,18 @@
         form.name(class_="form-control" + (" is-invalid" if form.name.errors else "")) }}
         {{ field_errors(form.name) }}
       </div>
-      <div class="col-auto">{{ form.submit(class_="btn btn-primary", value=_(form.submit.label.text)) }}</div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary">
+          <i class="ph ph-plus" aria-hidden="true"></i>{{ _(form.submit.label.text) }}
+        </button>
+      </div>
     </div>
   </div>
 </form>
 
 {% if departments %}
 <div class="card shadow-sm">
-  <table class="table align-middle mb-0">
+  <table class="table align-middle mb-0 table-stack">
     <thead>
       <tr>
         <th>{{ _("Name") }}</th>
@@ -28,13 +32,13 @@
     <tbody>
       {% for department in departments %}
       <tr>
-        <td>{{ department.name }}</td>
-        <td>{{ department.users | length }}</td>
+        <td data-label="{{ _("Name") }}">{{ department.name }}</td>
+        <td data-label="{{ _("Users") }}">{{ department.users | length }}</td>
         <td class="text-end">
           <a
             class="btn btn-outline-secondary btn-sm"
             href="{{ url_for('admin.department_edit', department_id=department.id) }}"
-            >{{ _("Edit") }}</a
+            ><i class="ph ph-pencil-simple" aria-hidden="true"></i>{{ _("Edit") }}</a
           >
           <form
             method="post"
@@ -43,7 +47,9 @@
             data-confirm="{{ _("Delete this department?") }}"
           >
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-danger btn-sm">{{ _("Delete") }}</button>
+            <button type="submit" class="btn btn-danger btn-sm">
+              <i class="ph ph-trash" aria-hidden="true"></i>{{ _("Delete") }}
+            </button>
           </form>
         </td>
       </tr>
@@ -52,5 +58,5 @@
   </table>
 </div>
 {% else %}
-<div class="card card-body shadow-sm text-muted">{{ _("No departments yet.") }}</div>
+<div class="card card-body shadow-sm text-muted empty-state">{{ _("No departments yet.") }}</div>
 {% endif %} {% endblock %}

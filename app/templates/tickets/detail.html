@@ -6,7 +6,9 @@ priority_badge %} {% from "macros/forms.html" import field_label, field_errors %
       <h1 class="h4 mb-0">
         <span class="text-muted">#{{ ticket.id }}</span> {{ ticket.subject }}
       </h1>
-      <button class="btn btn-secondary no-print" onclick="window.print()">{{ _("Print / Save as PDF") }}</button>
+      <button class="btn btn-secondary no-print" onclick="window.print()">
+        <i class="ph ph-printer" aria-hidden="true"></i>{{ _("Print / Save as PDF") }}
+      </button>
     </div>
     <div class="mb-2">
       {{ status_badge(ticket.status) }} {{ category_badge(ticket.category) }} {{
@@ -20,7 +22,7 @@ priority_badge %} {% from "macros/forms.html" import field_label, field_errors %
         {{ (ticket.assignee.full_name or ticket.assignee.username) if ticket.assignee else "—" }}
       </dd>
     </dl>
-    <p class="mb-0 mt-2">{{ ticket.description }}</p>
+    <p class="mb-0 mt-2 ticket-body">{{ ticket.description }}</p>
   </div>
 </div>
 
@@ -29,7 +31,7 @@ priority_badge %} {% from "macros/forms.html" import field_label, field_errors %
 <div class="card shadow-sm mb-3 border-success">
   <div class="card-body">
     <h2 class="h6">{{ _("Resolution") }}</h2>
-    <p class="mb-1">{{ ticket.resolution_note }}</p>
+    <p class="mb-1 comment-body">{{ ticket.resolution_note }}</p>
     {% if ticket.resolved_at %}
     <div class="small text-muted">
       {{ _("Resolved at {when}").format(when=ticket.resolved_at.strftime("%Y-%m-%d %H:%M")) }}
@@ -63,7 +65,9 @@ or is_staff) %}
         class="no-print"
       >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-primary">{{ _("Claim") }}</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="ph ph-hand-grabbing" aria-hidden="true"></i>{{ _("Claim") }}
+        </button>
       </form>
       {% endif %} {% if can_release %}
       <form
@@ -72,7 +76,9 @@ or is_staff) %}
         class="no-print"
       >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-outline-secondary">{{ _("Release") }}</button>
+        <button type="submit" class="btn btn-outline-secondary">
+          <i class="ph ph-hand-palm" aria-hidden="true"></i>{{ _("Release") }}
+        </button>
       </form>
       {% endif %} {% if can_assign %}
       <form
@@ -81,7 +87,9 @@ or is_staff) %}
         class="d-flex gap-2 no-print"
       >
         {{ assign_form.hidden_tag() }} {{ assign_form.agent_id(class_="form-select") }}
-        <button type="submit" class="btn btn-outline-primary">{{ _("Assign") }}</button>
+        <button type="submit" class="btn btn-outline-primary">
+          <i class="ph ph-user-plus" aria-hidden="true"></i>{{ _("Assign") }}
+        </button>
       </form>
       {% endif %} {% if can_resolve %}
       <form
@@ -97,7 +105,9 @@ or is_staff) %}
           resolve_form.resolution_note.errors else ""), rows="2", placeholder=_("What fixed it?")) }}
           {{ field_errors(resolve_form.resolution_note) }}
         </div>
-        <button type="submit" class="btn btn-success">{{ _("Resolve") }}</button>
+        <button type="submit" class="btn btn-success">
+          <i class="ph ph-check-circle" aria-hidden="true"></i>{{ _("Resolve") }}
+        </button>
       </form>
       {% endif %} {% if can_reopen %}
       <form
@@ -111,7 +121,9 @@ or is_staff) %}
           <label class="form-label" for="reopen-comment">{{ _("Comment (optional)") }}</label>
           <textarea class="form-control" id="reopen-comment" name="comment" rows="2"></textarea>
         </div>
-        <button type="submit" class="btn btn-warning">{{ _("Reopen") }}</button>
+        <button type="submit" class="btn btn-warning">
+          <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>{{ _("Reopen") }}
+        </button>
       </form>
       {% endif %} {% if can_close %}
       <form
@@ -121,7 +133,9 @@ or is_staff) %}
         data-confirm="{{ _("Close this ticket? It will accept no further comments or edits.") }}"
       >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-outline-danger">{{ _("Close") }}</button>
+        <button type="submit" class="btn btn-outline-danger">
+          <i class="ph ph-x" aria-hidden="true"></i>{{ _("Close") }}
+        </button>
       </form>
       {% endif %}
     </div>
@@ -141,7 +155,7 @@ or is_staff) %}
       <span class="badge text-bg-warning">{{ _("Internal note") }}</span>
       {% endif %}
     </div>
-    <div class="mt-1">{{ comment.body }}</div>
+    <div class="mt-1 comment-body">{{ comment.body }}</div>
   </div>
 </div>
 {% endif %} {% else %}
@@ -168,7 +182,9 @@ or is_staff) %}
         field_label(comment_form.is_internal, "form-check-label") }}
       </div>
       {% endif %}
-      <button type="submit" class="btn btn-primary">{{ _("Post comment") }}</button>
+      <button type="submit" class="btn btn-primary">
+        <i class="ph ph-chat-circle" aria-hidden="true"></i>{{ _("Post comment") }}
+      </button>
     </form>
   </div>
 </div>
@@ -205,7 +221,9 @@ or is_staff) %}
           "")) }} {{ field_errors(edit_form.priority) }}
         </div>
       </div>
-      <button type="submit" class="btn btn-primary">{{ _("Save changes") }}</button>
+      <button type="submit" class="btn btn-primary">
+        <i class="ph ph-floppy-disk" aria-hidden="true"></i>{{ _("Save changes") }}
+      </button>
     </form>
   </div>
 </div>

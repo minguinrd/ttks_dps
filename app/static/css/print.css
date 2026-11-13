@@ -9,11 +9,11 @@
     font-size: 10pt;
   }
 
-  /* Screen chrome and controls never print; flash messages (.alert-dismissible
+  /* Screen chrome and controls never print; flash messages (.toast-container
      in base.html) are transient feedback, not report content. */
   .navbar,
   .no-print,
-  .alert-dismissible {
+  .toast-container {
     display: none !important;
   }
 

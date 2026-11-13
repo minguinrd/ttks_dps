@@ -1,0 +1,615 @@
+/* ==========================================================================
+   TTKS DPS — UI layer
+   Loaded after Bootstrap 5.3.3 in base.html. Restyles presentation only;
+   Bootstrap's markup contract and JS behaviour are untouched.
+
+   Brand colour: base.html injects --brand-accent (admin setting, #RRGGBB)
+   and --brand-accent-rgb ("r, g, b") on :root. Every accent-aware rule
+   carries a fallback to Bootstrap's default blue so the page still renders
+   coherently if the variable is missing.
+
+   Direction: minimal / Swiss — slate neutrals on a light theme, generous
+   white space, geometric sans (Outfit display + Work Sans body), soft
+   elevation, 180ms transitions, and responsive tables that stack into
+   labelled rows on phones.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Design tokens
+   -------------------------------------------------------------------------- */
+:root {
+  /* Typography */
+  --ui-font-sans: "Work Sans", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --ui-font-display: "Outfit", var(--ui-font-sans);
+
+  /* Slate neutrals (light theme) */
+  --ui-bg: #f6f8fb;
+  --ui-surface: #ffffff;
+  --ui-text: #0f172a;
+  --ui-text-muted: #64748b;
+  --ui-border: #e5e9f0;
+  --ui-border-soft: #eef1f6;
+
+  /* Elevation + motion */
+  --ui-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+    0 6px 20px -14px rgba(15, 23, 42, 0.3);
+  --ui-shadow-pop: 0 16px 40px -24px rgba(15, 23, 42, 0.35);
+  --ui-transition: 180ms ease;
+
+  /* Bootstrap variable overrides — token-level restyling */
+  --bs-body-font-family: var(--ui-font-sans);
+  --bs-font-sans-serif: var(--ui-font-sans);
+  --bs-body-line-height: 1.6;
+  --bs-body-color: var(--ui-text);
+  --bs-body-bg: var(--ui-bg);
+  --bs-secondary-color: var(--ui-text-muted);
+  --bs-emphasis-color: var(--ui-text);
+  --bs-border-color: var(--ui-border);
+  --bs-border-color-translucent: var(--ui-border);
+  --bs-tertiary-bg: var(--ui-border-soft);
+
+  /* One global radius keeps every stock component on the same grid */
+  --bs-border-radius: 0.625rem;
+  --bs-border-radius-sm: 0.45rem;
+  --bs-border-radius-lg: 0.85rem;
+  --bs-border-radius-pill: 50rem;
+
+  /* The app uses .shadow-sm on nearly every card — give it real elevation */
+  --bs-box-shadow-sm: var(--ui-shadow);
+  --bs-box-shadow: var(--ui-shadow-pop);
+
+  /* Brand accent → Bootstrap's primary palette and links */
+  --bs-primary: var(--brand-accent, #0d6efd);
+  --bs-primary-rgb: var(--brand-accent-rgb, 13, 110, 253);
+  --bs-primary-bg-subtle: color-mix(in srgb, var(--brand-accent, #0d6efd) 14%, #fff);
+  --bs-primary-text-emphasis: color-mix(in srgb, var(--brand-accent, #0d6efd) 72%, #000);
+  --bs-primary-border-subtle: color-mix(in srgb, var(--brand-accent, #0d6efd) 32%, #fff);
+  --bs-link-color-rgb: var(--brand-accent-rgb, 13, 110, 253);
+
+  /* Cards: white surfaces, quiet header band */
+  --bs-card-bg: var(--ui-surface);
+  --bs-card-border-color: var(--ui-border);
+  --bs-card-cap-bg: #f8fafc;
+  --bs-card-cap-color: #334155;
+  --bs-card-cap-padding-y: 0.85rem;
+  --bs-card-cap-padding-x: 1.25rem;
+  --bs-card-spacer-y: 1.25rem;
+  --bs-card-spacer-x: 1.25rem;
+
+  /* Floating menus sit on white, not the page tint */
+  --bs-dropdown-bg: var(--ui-surface);
+  --bs-dropdown-border-color: var(--ui-border);
+  --bs-dropdown-box-shadow: var(--ui-shadow-pop);
+
+  --bs-list-group-bg: var(--ui-surface);
+  --bs-list-group-border-color: var(--ui-border-soft);
+}
+
+/* --------------------------------------------------------------------------
+   2. Base + typography
+   -------------------------------------------------------------------------- */
+::selection {
+  background: color-mix(in srgb, var(--brand-accent, #0d6efd) 24%, #fff);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+  font-family: var(--ui-font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--ui-text);
+}
+
+main h1 {
+  overflow-wrap: break-word;
+}
+
+a:focus-visible {
+  outline: 2px solid rgba(var(--brand-accent-rgb, 13, 110, 253), 0.55);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   3. Navbar
+   -------------------------------------------------------------------------- */
+.navbar {
+  background-color: var(--brand-accent, #0d6efd);
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08), 0 12px 30px -24px rgba(15, 23, 42, 0.7);
+}
+
+.navbar-brand {
+  font-family: var(--ui-font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 60vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navbar-brand-img {
+  max-height: 30px;
+  width: auto;
+}
+
+.navbar .navbar-nav .nav-link {
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 500;
+  border-radius: var(--bs-border-radius-sm);
+  padding: 0.5rem 0.8rem;
+  transition: color var(--ui-transition), background-color var(--ui-transition);
+}
+
+.navbar .navbar-nav .nav-link:hover,
+.navbar .navbar-nav .nav-link:focus {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+/* Notification bell: relative wrapper so the unread badge can overhang. */
+.nav-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-icon #unread-badge {
+  position: absolute;
+  top: -5px;
+  right: -9px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.25em 0.45em;
+  border: 1.5px solid var(--brand-accent, #0d6efd);
+}
+
+@media (max-width: 991.98px) {
+  .navbar .navbar-collapse {
+    padding: 0.5rem 0 0.75rem;
+  }
+
+  .navbar .navbar-nav .nav-link {
+    padding: 0.65rem 0.75rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4. Buttons
+   -------------------------------------------------------------------------- */
+.btn {
+  font-weight: 500;
+  transition: background-color var(--ui-transition), border-color var(--ui-transition),
+    color var(--ui-transition), box-shadow var(--ui-transition);
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--brand-accent, #0d6efd);
+  --bs-btn-border-color: var(--brand-accent, #0d6efd);
+  --bs-btn-hover-bg: color-mix(in srgb, var(--brand-accent, #0d6efd) 84%, #000);
+  --bs-btn-hover-border-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 84%, #000);
+  --bs-btn-active-bg: color-mix(in srgb, var(--brand-accent, #0d6efd) 74%, #000);
+  --bs-btn-active-border-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 74%, #000);
+  --bs-btn-disabled-bg: var(--brand-accent, #0d6efd);
+  --bs-btn-disabled-border-color: var(--brand-accent, #0d6efd);
+  --bs-btn-focus-shadow-rgb: var(--brand-accent-rgb, 13, 110, 253);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--brand-accent, #0d6efd);
+  --bs-btn-border-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 45%, #fff);
+  --bs-btn-hover-bg: var(--brand-accent, #0d6efd);
+  --bs-btn-hover-border-color: var(--brand-accent, #0d6efd);
+  --bs-btn-active-bg: color-mix(in srgb, var(--brand-accent, #0d6efd) 84%, #000);
+  --bs-btn-active-border-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 84%, #000);
+  --bs-btn-focus-shadow-rgb: var(--brand-accent-rgb, 13, 110, 253);
+}
+
+/* Touch devices get full-size hit areas (WCAG 2.5.5 target size). */
+@media (pointer: coarse) {
+  .btn {
+    min-height: 44px;
+  }
+
+  .btn-sm {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+  }
+
+  .dropdown-item {
+    min-height: 44px;
+  }
+}
+
+/* Phosphor icons inside buttons: one consistent size, nudged onto the
+   baseline, with breathing room after a leading icon. */
+.btn .ph {
+  font-size: 1.15em;
+  vertical-align: -0.15em;
+}
+
+.btn > .ph:first-child {
+  margin-right: 0.4em;
+}
+
+/* --------------------------------------------------------------------------
+   5. Forms
+   -------------------------------------------------------------------------- */
+.form-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #334155;
+  margin-bottom: 0.4rem;
+}
+
+.form-control,
+.form-select {
+  background-color: var(--ui-surface);
+  border-color: var(--ui-border);
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--ui-surface);
+  border-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 45%, #fff);
+  box-shadow: 0 0 0 0.25rem rgba(var(--brand-accent-rgb, 13, 110, 253), 0.16);
+}
+
+.form-check-input {
+  border-color: var(--ui-border);
+}
+
+.form-check-input:checked,
+.form-check-input:focus {
+  background-color: var(--brand-accent, #0d6efd);
+  border-color: var(--brand-accent, #0d6efd);
+}
+
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.25rem rgba(var(--brand-accent-rgb, 13, 110, 253), 0.16);
+}
+
+.form-text {
+  font-size: 0.85rem;
+  color: var(--ui-text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   6. Cards
+   -------------------------------------------------------------------------- */
+.card {
+  border-color: var(--ui-border);
+  box-shadow: var(--ui-shadow);
+}
+
+.card-header {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  border-bottom-color: var(--ui-border-soft);
+}
+
+.card-body {
+  overflow-wrap: break-word;
+}
+
+/* --------------------------------------------------------------------------
+   7. Tables
+   -------------------------------------------------------------------------- */
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-hover-bg: #f8fafc;
+  margin-bottom: 0;
+}
+
+.table > :not(caption) > * > * {
+  padding: 0.7rem 1rem;
+  border-bottom-color: var(--ui-border-soft);
+  vertical-align: middle;
+}
+
+.table thead th {
+  background-color: #f8fafc;
+  color: var(--ui-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-bottom-color: var(--ui-border);
+}
+
+.table a {
+  text-decoration: none;
+}
+
+.table a:hover {
+  text-decoration: underline !important;
+}
+
+/* Phones: the wide data tables become stacked rows, each cell labelled by
+   its data-label attribute (mirrors the <th> text). Tables without a
+   data-label — action cells — render as a right-aligned button row. */
+@media (max-width: 767.98px) {
+  .table-stack thead {
+    display: none;
+  }
+
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tr,
+  .table-stack td {
+    display: block;
+    width: 100%;
+  }
+
+  .table-stack tr {
+    padding: 0.65rem 0;
+    border-bottom: 1px solid var(--ui-border-soft);
+  }
+
+  .table-stack tr:first-child {
+    padding-top: 0.15rem;
+  }
+
+  .table-stack tr:last-child {
+    padding-bottom: 0.15rem;
+    border-bottom: 0;
+  }
+
+  .table-stack td {
+    display: grid;
+    grid-template-columns: 8.5rem minmax(0, 1fr);
+    gap: 0.15rem 1rem;
+    padding: 0.3rem 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .table-stack td > * {
+    justify-self: start;
+  }
+
+  .table-stack td::before {
+    content: attr(data-label);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ui-text-muted);
+    padding-top: 0.15rem;
+  }
+
+  .table-stack td:not([data-label]) {
+    display: block;
+    text-align: right;
+    padding-top: 0.55rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. Badges — soft pills instead of saturated text-bg-* blocks
+   -------------------------------------------------------------------------- */
+.badge {
+  --bs-badge-padding-x: 0.7em;
+  --bs-badge-padding-y: 0.4em;
+  --bs-badge-font-weight: 600;
+  --bs-badge-border-radius: 999px;
+}
+
+.badge.text-bg-primary {
+  background-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 15%, #fff) !important;
+  color: color-mix(in srgb, var(--brand-accent, #0d6efd) 78%, #000) !important;
+}
+
+.badge.text-bg-secondary {
+  background-color: #eef1f6 !important;
+  color: #475569 !important;
+}
+
+.badge.text-bg-success {
+  background-color: #dcf5e7 !important;
+  color: #16794a !important;
+}
+
+.badge.text-bg-info {
+  background-color: #e0f2fe !important;
+  color: #0369a1 !important;
+}
+
+.badge.text-bg-warning {
+  background-color: #fef3c7 !important;
+  color: #9a6700 !important;
+}
+
+.badge.text-bg-danger {
+  background-color: #fde8e8 !important;
+  color: #b91c1c !important;
+}
+
+.badge.text-bg-dark {
+  background-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+.badge.text-bg-light {
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+  box-shadow: inset 0 0 0 1px #e2e8f0;
+}
+
+/* --------------------------------------------------------------------------
+   9. Alerts, dropdowns, tabs, list groups
+   -------------------------------------------------------------------------- */
+.alert {
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  font-size: 0.95rem;
+}
+
+.dropdown-menu {
+  padding: 0.4rem;
+  border-radius: var(--bs-border-radius-lg);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--bs-border-radius-sm);
+  font-weight: 500;
+  transition: background-color var(--ui-transition), color var(--ui-transition);
+}
+
+.dropdown-item:hover {
+  background-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 12%, #fff);
+  color: color-mix(in srgb, var(--brand-accent, #0d6efd) 75%, #000);
+}
+
+.nav-tabs {
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.nav-tabs .nav-link {
+  color: var(--ui-text-muted);
+  font-weight: 500;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
+  margin-bottom: -1px;
+  padding: 0.55rem 0.95rem;
+  transition: color var(--ui-transition), border-color var(--ui-transition),
+    background-color var(--ui-transition);
+}
+
+.nav-tabs .nav-link:hover {
+  color: color-mix(in srgb, var(--brand-accent, #0d6efd) 75%, #000);
+  background-color: #f1f5f9;
+}
+
+.nav-tabs .nav-link.active {
+  color: color-mix(in srgb, var(--brand-accent, #0d6efd) 78%, #000);
+  background-color: transparent;
+  border-bottom: 2px solid var(--brand-accent, #0d6efd);
+  font-weight: 600;
+}
+
+.list-group-item + .list-group-item {
+  border-top-color: var(--ui-border-soft);
+}
+
+/* --------------------------------------------------------------------------
+   10. Empty states + dashboard/report stat numbers
+   -------------------------------------------------------------------------- */
+.empty-state {
+  text-align: center;
+  padding: 2.75rem 1.5rem;
+  color: var(--ui-text-muted);
+}
+
+.empty-state::before {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 12h-6l-2 3h-4l-2-3H2'/%3E%3Cpath d='M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+.empty-state a {
+  font-weight: 500;
+}
+
+.card.text-center .fs-2 {
+  font-family: var(--ui-font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--brand-accent, #0d6efd);
+}
+
+/* --------------------------------------------------------------------------
+   11. Notifications list
+   -------------------------------------------------------------------------- */
+.list-group-item .btn-link {
+  color: var(--brand-accent, #0d6efd);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.list-group-item .btn-link:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   12. Ticket detail — user-authored line breaks and long tokens
+   -------------------------------------------------------------------------- */
+.ticket-body,
+.comment-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------------------
+   13. Responsive spacing + reduced motion
+   -------------------------------------------------------------------------- */
+@media (max-width: 575.98px) {
+  :root {
+    --bs-card-spacer-y: 1rem;
+    --bs-card-spacer-x: 1rem;
+    --bs-card-cap-padding-y: 0.75rem;
+    --bs-card-cap-padding-x: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   14. Toasts — flash-message feedback (base.html, shown by app.js)
+   -------------------------------------------------------------------------- */
+.toast-container {
+  z-index: 1090; /* above the navbar (1030) and dropdowns */
+}
+.toast-container .toast {
+  box-shadow: var(--ui-shadow-pop);
+}
+
+.toast-container .toast .ph {
+  font-size: 1.25em;
+  flex: none;
+}
+
+@media (max-width: 575.98px) {
+  .toast-container {
+    left: 0.5rem;
+    right: 0.5rem;
+  }
+}

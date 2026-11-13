@@ -88,7 +88,11 @@
 </div>
 
 <div class="mt-3">
-  <a class="btn btn-outline-primary" href="{{ url_for('admin.users') }}">{{ _("Manage users") }}</a>
-  <a class="btn btn-outline-primary" href="{{ url_for('admin.departments') }}">{{ _("Manage departments") }}</a>
+  <a class="btn btn-outline-primary" href="{{ url_for('admin.users') }}"
+    ><i class="ph ph-users" aria-hidden="true"></i>{{ _("Manage users") }}</a
+  >
+  <a class="btn btn-outline-primary" href="{{ url_for('admin.departments') }}"
+    ><i class="ph ph-buildings" aria-hidden="true"></i>{{ _("Manage departments") }}</a
+  >
 </div>
 {% endblock %}

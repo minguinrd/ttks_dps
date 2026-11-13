@@ -3,7 +3,9 @@
   <h1 class="h4 mb-0">{{ _("Notifications") }}</h1>
   <form method="post" action="{{ url_for('main.notifications_read_all') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-    <button class="btn btn-outline-secondary btn-sm" type="submit">{{ _("Mark all as read") }}</button>
+    <button class="btn btn-outline-secondary btn-sm" type="submit">
+      <i class="ph ph-check" aria-hidden="true"></i>{{ _("Mark all as read") }}
+    </button>
   </form>
 </div>
 {% if notifications %}
@@ -33,5 +35,5 @@
   </ul>
 </div>
 {% else %}
-<div class="card card-body shadow-sm text-muted">{{ _("No notifications yet.") }}</div>
+<div class="card card-body shadow-sm text-muted empty-state">{{ _("No notifications yet.") }}</div>
 {% endif %} {% endblock %}

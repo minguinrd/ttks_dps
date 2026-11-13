@@ -1,7 +1,9 @@
 {% extends "base.html" %} {% from "macros/badges.html" import role_label %} {% block title %}{{ _("Users") }}{% endblock %} {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">{{ _("Users") }}</h1>
-  <a class="btn btn-primary" href="{{ url_for('admin.user_new') }}">{{ _("New user") }}</a>
+  <a class="btn btn-primary" href="{{ url_for('admin.user_new') }}"
+    ><i class="ph ph-plus" aria-hidden="true"></i>{{ _("New user") }}</a
+  >
 </div>
 
 {# Tabs narrow the list via ?status=; the default shows everyone. #}
@@ -20,7 +22,7 @@
 
 {% if users %}
 <div class="card shadow-sm">
-  <table class="table table-hover align-middle mb-0">
+  <table class="table table-hover align-middle mb-0 table-stack">
     <thead>
       <tr>
         <th>{{ _("Username") }}</th>
@@ -35,12 +37,12 @@
     <tbody>
       {% for user in users %}
       <tr>
-        <td>{{ user.username }}</td>
-        <td>{{ user.full_name or "—" }}</td>
-        <td>{{ user.email or "—" }}</td>
-        <td>{{ role_label(user.role) }}</td>
-        <td>{{ user.department.name if user.department else "—" }}</td>
-        <td>
+        <td data-label="{{ _("Username") }}">{{ user.username }}</td>
+        <td data-label="{{ _("Full name") }}">{{ user.full_name or "—" }}</td>
+        <td data-label="{{ _("Email") }}">{{ user.email or "—" }}</td>
+        <td data-label="{{ _("Role") }}">{{ role_label(user.role) }}</td>
+        <td data-label="{{ _("Department") }}">{{ user.department.name if user.department else "—" }}</td>
+        <td data-label="{{ _("Status") }}">
           {%- set colors = {"pending": "warning", "active": "success", "suspended": "danger"} -%}
           {%- set labels = {"pending": _("pending"), "active": _("active"), "suspended": _("suspended")} -%}
           <span class="badge text-bg-{{ colors.get(user.status, 'secondary') }}"
@@ -49,7 +51,7 @@
         </td>
         <td class="text-end">
           <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.user_edit', user_id=user.id) }}"
-            >{{ _("Edit") }}</a
+            ><i class="ph ph-pencil-simple" aria-hidden="true"></i>{{ _("Edit") }}</a
           >
           {% if user.status == "pending" %}
           <form
@@ -58,7 +60,9 @@
             class="d-inline"
           >
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-success btn-sm">{{ _("Approve") }}</button>
+            <button type="submit" class="btn btn-success btn-sm">
+              <i class="ph ph-check-circle" aria-hidden="true"></i>{{ _("Approve") }}
+            </button>
           </form>
           <form
             method="post"
@@ -67,7 +71,9 @@
             data-confirm="{{ _("Reject this registration? The account will be suspended.") }}"
           >
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-danger btn-sm">{{ _("Reject") }}</button>
+            <button type="submit" class="btn btn-danger btn-sm">
+              <i class="ph ph-x-circle" aria-hidden="true"></i>{{ _("Reject") }}
+            </button>
           </form>
           {% elif user.status == "active" %} {% if user.id != current_user.id %}
           <form
@@ -77,7 +83,9 @@
             data-confirm="{{ _("Suspend this user? They will no longer be able to log in.") }}"
           >
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-danger btn-sm">{{ _("Suspend") }}</button>
+            <button type="submit" class="btn btn-danger btn-sm">
+              <i class="ph ph-pause-circle" aria-hidden="true"></i>{{ _("Suspend") }}
+            </button>
           </form>
           {% endif %} {% elif user.status == "suspended" %}
           <form
@@ -86,7 +94,9 @@
             class="d-inline"
           >
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-success btn-sm">{{ _("Reactivate") }}</button>
+            <button type="submit" class="btn btn-success btn-sm">
+              <i class="ph ph-play-circle" aria-hidden="true"></i>{{ _("Reactivate") }}
+            </button>
           </form>
           {% endif %}
         </td>
@@ -96,5 +106,5 @@
   </table>
 </div>
 {% else %}
-<div class="card card-body shadow-sm text-muted">{{ _("No users match this filter.") }}</div>
+<div class="card card-body shadow-sm text-muted empty-state">{{ _("No users match this filter.") }}</div>
 {% endif %} {% endblock %}

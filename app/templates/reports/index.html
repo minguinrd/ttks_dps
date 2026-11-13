@@ -2,7 +2,9 @@
 priority_badge, category_label, priority_label %} {% from "macros/forms.html" import field_label %} {% block title %}{{ _("Reports") }}{% endblock %} {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">{{ _("Reports") }}</h1>
-  <button class="btn btn-secondary no-print" onclick="window.print()">{{ _("Print / Save as PDF") }}</button>
+  <button class="btn btn-secondary no-print" onclick="window.print()">
+    <i class="ph ph-printer" aria-hidden="true"></i>{{ _("Print / Save as PDF") }}
+  </button>
 </div>
 
 {# Filters narrow the report via query params; an empty value means "no filter". #}
@@ -33,8 +35,12 @@ priority_badge, category_label, priority_label %} {% from "macros/forms.html" im
         form.requester_id(class_="form-select") }}
       </div>
       <div class="col-auto">
-        <button type="submit" class="btn btn-primary">{{ _("Apply") }}</button>
-        <a class="btn btn-outline-secondary" href="{{ url_for('reports.index') }}">{{ _("Reset") }}</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="ph ph-funnel" aria-hidden="true"></i>{{ _("Apply") }}
+        </button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('reports.index') }}"
+          ><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>{{ _("Reset") }}</a
+        >
       </div>
     </div>
   </div>
@@ -134,7 +140,7 @@ priority_badge, category_label, priority_label %} {% from "macros/forms.html" im
 
   {% if tickets %}
   <div class="card shadow-sm">
-    <table class="table table-hover align-middle mb-0">
+    <table class="table table-hover align-middle mb-0 table-stack">
       <thead>
         <tr>
           <th>#</th>
@@ -151,32 +157,38 @@ priority_badge, category_label, priority_label %} {% from "macros/forms.html" im
       <tbody>
         {% for ticket in tickets %}
         <tr>
-          <td>
+          <td data-label="#">
             <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}">#{{ ticket.id }}</a>
           </td>
-          <td>
+          <td data-label="{{ _("Subject") }}">
             <a
               href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}"
               class="text-decoration-none"
               >{{ ticket.subject }}</a
             >
           </td>
-          <td>{{ status_badge(ticket.status) }}</td>
-          <td>{{ category_badge(ticket.category) }}</td>
-          <td>{{ priority_badge(ticket.priority) }}</td>
-          <td>{{ ticket.requester.full_name or ticket.requester.username }}</td>
-          <td>{{ ticket.department.name if ticket.department else "—" }}</td>
-          <td>
+          <td data-label="{{ _("Status") }}">{{ status_badge(ticket.status) }}</td>
+          <td data-label="{{ _("Category") }}">{{ category_badge(ticket.category) }}</td>
+          <td data-label="{{ _("Priority") }}">{{ priority_badge(ticket.priority) }}</td>
+          <td data-label="{{ _("Requester") }}">
+            {{ ticket.requester.full_name or ticket.requester.username }}
+          </td>
+          <td data-label="{{ _("Department") }}">
+            {{ ticket.department.name if ticket.department else "—" }}
+          </td>
+          <td data-label="{{ _("Assignee") }}">
             {{ (ticket.assignee.full_name or ticket.assignee.username) if ticket.assignee else "—" }}
           </td>
-          <td>{{ ticket.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+          <td data-label="{{ _("Created") }}">{{ ticket.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}
-  <div class="card card-body shadow-sm text-muted">{{ _("No tickets match the current filters.") }}</div>
+  <div class="card card-body shadow-sm text-muted empty-state">
+    {{ _("No tickets match the current filters.") }}
+  </div>
   {% endif %}
 </div>
 {% endblock %}

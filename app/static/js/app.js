@@ -22,3 +22,13 @@ document.addEventListener("submit", function (event) {
     }
   });
 });
+
+// Flash messages render as Bootstrap toasts (base.html); show them on load.
+// data-bs-delay on each toast handles the auto-dismiss (4.5s).
+document.addEventListener("DOMContentLoaded", function () {
+  var container = document.getElementById("flash-toasts");
+  if (!container || typeof bootstrap === "undefined") return;
+  container.querySelectorAll(".toast").forEach(function (el) {
+    new bootstrap.Toast(el).show();
+  });
+});

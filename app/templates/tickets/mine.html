@@ -2,11 +2,13 @@
 priority_badge %} {% block title %}{{ _("My Tickets") }}{% endblock %} {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">{{ _("My Tickets") }}</h1>
-  <a class="btn btn-primary" href="{{ url_for('tickets.new') }}">{{ _("New ticket") }}</a>
+  <a class="btn btn-primary" href="{{ url_for('tickets.new') }}"
+    ><i class="ph ph-plus" aria-hidden="true"></i>{{ _("New ticket") }}</a
+  >
 </div>
 {% if tickets %}
 <div class="card shadow-sm">
-  <table class="table table-hover align-middle mb-0">
+  <table class="table table-hover align-middle mb-0 table-stack">
     <thead>
       <tr>
         <th>#</th>
@@ -20,25 +22,27 @@ priority_badge %} {% block title %}{{ _("My Tickets") }}{% endblock %} {% block 
     <tbody>
       {% for ticket in tickets %}
       <tr>
-        <td>
+        <td data-label="#">
           <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}">#{{ ticket.id }}</a>
         </td>
-        <td>
+        <td data-label="{{ _("Subject") }}">
           <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}" class="text-decoration-none"
             >{{ ticket.subject }}</a
           >
         </td>
-        <td>{{ status_badge(ticket.status) }}</td>
-        <td>{{ category_badge(ticket.category) }}</td>
-        <td>{{ priority_badge(ticket.priority) }}</td>
-        <td>{{ ticket.created_at.strftime("%Y-%m-%d %H:%M") if ticket.created_at else "" }}</td>
+        <td data-label="{{ _("Status") }}">{{ status_badge(ticket.status) }}</td>
+        <td data-label="{{ _("Category") }}">{{ category_badge(ticket.category) }}</td>
+        <td data-label="{{ _("Priority") }}">{{ priority_badge(ticket.priority) }}</td>
+        <td data-label="{{ _("Created") }}">
+          {{ ticket.created_at.strftime("%Y-%m-%d %H:%M") if ticket.created_at else "" }}
+        </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
 {% else %}
-<div class="card card-body shadow-sm text-muted">
+<div class="card card-body shadow-sm text-muted empty-state">
   {{ _("No tickets yet.") }}
   <a href="{{ url_for('tickets.new') }}">{{ _("Create your first ticket") }}</a>.
 </div>

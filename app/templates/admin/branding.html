@@ -1,33 +1,43 @@
 {% extends "base.html" %} {% from "macros/forms.html" import field_label, field_errors %} {% block title %}{{ _("Branding") }}{% endblock %} {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-8 col-lg-6">
-    <h1 class="h4 mb-3">{{ _("Branding") }}</h1>
-    <form method="post" enctype="multipart/form-data" novalidate>
-      {{ form.hidden_tag() }}
-      <div class="mb-3">
-        {{ field_label(form.site_name) }} {{
-        form.site_name(class_="form-control" + (" is-invalid" if form.site_name.errors else "")) }}
-        {{ field_errors(form.site_name) }}
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">{{ _("Branding") }}</h1>
+        <form method="post" enctype="multipart/form-data" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            {{ field_label(form.site_name) }}
+            {{ form.site_name(class_="form-control" + (" is-invalid" if form.site_name.errors else "")) }}
+            {{ field_errors(form.site_name) }}
+          </div>
+          <div class="mb-3">
+            {{ field_label(form.accent_color) }}
+            {{ form.accent_color(class_="form-control" + (" is-invalid" if form.accent_color.errors else "")) }}
+            {{ field_errors(form.accent_color) }}
+          </div>
+          <div class="mb-3">
+            {{ field_label(form.logo) }}
+            {{ form.logo(class_="form-control" + (" is-invalid" if form.logo.errors else "")) }}
+            {{ field_errors(form.logo) }}
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="ph ph-floppy-disk" aria-hidden="true"></i>{{ _(form.submit.label.text) }}
+          </button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}"
+            ><i class="ph ph-arrow-left" aria-hidden="true"></i>{{ _("Cancel") }}</a
+          >
+        </form>
+        {% if branding.has_logo %}
+        <form method="post" action="{{ url_for('admin.branding_logo_delete') }}" class="mt-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button class="btn btn-outline-danger" type="submit">
+            <i class="ph ph-trash" aria-hidden="true"></i>{{ _("Remove logo") }}
+          </button>
+        </form>
+        {% endif %}
       </div>
-      <div class="mb-3">
-        {{ field_label(form.accent_color) }} {{
-        form.accent_color(class_="form-control" + (" is-invalid" if form.accent_color.errors else
-        "")) }} {{ field_errors(form.accent_color) }}
-      </div>
-      <div class="mb-3">
-        {{ field_label(form.logo) }} {{
-        form.logo(class_="form-control" + (" is-invalid" if form.logo.errors else "")) }}
-        {{ field_errors(form.logo) }}
-      </div>
-      {{ form.submit(class_="btn btn-primary", value=_(form.submit.label.text)) }}
-      <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">{{ _("Cancel") }}</a>
-    </form>
-    {% if branding.has_logo %}
-    <form method="post" action="{{ url_for('admin.branding_logo_delete') }}" class="mt-3">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <button class="btn btn-outline-danger" type="submit">{{ _("Remove logo") }}</button>
-    </form>
-    {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}
