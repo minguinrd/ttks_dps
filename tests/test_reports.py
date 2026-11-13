@@ -110,6 +110,24 @@ def test_reports_status_filter(client, user_factory, login, ticket_factory):
     assert "ALREADY-CLOSED" not in html
 
 
+def test_reports_page_declares_landscape_page(client, user_factory, login, ticket_factory):
+    agent = user_factory(role="agent")
+    requester = user_factory(role="user", username="reports-landscape-req")
+    ticket = ticket_factory(requester, subject="LANDSCAPE-TICKET")
+    login(client, agent)
+
+    reports_html = client.get("/reports").get_data(as_text=True)
+
+    assert "size: A4 landscape" in reports_html
+    # The override must be declared after the print.css link to win the cascade.
+    assert reports_html.index("print.css") < reports_html.index("size: A4 landscape")
+
+    login(client, requester)
+
+    detail_html = client.get(f"/tickets/{ticket.id}").get_data(as_text=True)
+    assert "size: A4 landscape" not in detail_html
+
+
 def test_print_button_present(client, user_factory, login, ticket_factory):
     agent = user_factory(role="agent")
     requester = user_factory(role="user", username="reports-print-req")

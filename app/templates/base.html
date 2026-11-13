@@ -37,6 +37,9 @@
         background-color: color-mix(in srgb, var(--brand-accent) 62%, #000);
       }
     </style>
+    {# Page-level @page overrides (landscape reports). Must stay after the
+       print.css <link> above so the later rule wins the cascade. #}
+    {% block page_css %}{% endblock %}
   </head>
   <body
     data-confirm-title="{{ _("Are you sure?") }}"

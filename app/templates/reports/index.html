@@ -1,5 +1,14 @@
 {% extends "base.html" %} {% from "macros/badges.html" import status_badge, category_badge,
-priority_badge, category_label, priority_label %} {% from "macros/forms.html" import field_label %} {% block title %}{{ _("Reports") }}{% endblock %} {% block content %}
+priority_badge, category_label, priority_label %} {% from "macros/forms.html" import field_label %} {% block title %}{{ _("Reports") }}{% endblock %} {% block page_css %}
+<style>
+  /* Scoped to this document: print.css keeps portrait A4 for the
+     ticket-detail printout; this later @page wins the cascade. */
+  @page {
+    size: A4 landscape;
+    margin: 1.5cm;
+  }
+</style>
+{% endblock %} {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">{{ _("Reports") }}</h1>
   <button class="btn btn-secondary no-print" onclick="window.print()">
