@@ -26,4 +26,34 @@
   tr {
     page-break-inside: avoid;
   }
+
+  /* Report rows of cards: keep each row intact across page breaks and drop
+     screen shadows. Scoped to .row — the ticket table's card (a direct
+     child of .printable, not inside a row) must still paginate. */
+  .printable .row {
+    break-inside: avoid;
+  }
+
+  .printable .row .card {
+    box-shadow: none;
+  }
+
+  .printable .row .card .card-body {
+    padding: 0.35rem 0.5rem;
+  }
+
+  .printable .fs-2 {
+    font-size: 1.35rem;
+  }
+
+  /* Landscape: tighter type so nine table columns fit the page width.
+     Cells wrap by default — no nowrap anywhere. */
+  .printable .table {
+    font-size: 9pt;
+  }
+
+  .printable .table td,
+  .printable .table th {
+    padding: 0.25rem 0.4rem;
+  }
 }

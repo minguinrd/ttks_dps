@@ -1,5 +1,8 @@
 import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+_CSS = Path(__file__).resolve().parents[1] / "app" / "static" / "css"
 
 
 def _text(html):
@@ -149,6 +152,38 @@ def test_print_css_linked(client, user_factory, login):
 
     assert resp.status_code == 200
     assert "print.css" in resp.get_data(as_text=True)
+
+
+def test_print_css_fit_rules():
+    css = (_CSS / "print.css").read_text(encoding="utf-8")
+
+    # Pagination basics must survive any edit to the fit rules.
+    assert "table-header-group" in css
+    assert "page-break-inside: avoid" in css
+    # Compact landscape table.
+    assert "font-size: 9pt" in css
+    # Cards avoid breaks, but only the summary/breakdown rows — the ticket
+    # table's own card must stay free to paginate across pages.
+    assert ".printable .row" in css
+    assert ".printable .card {" not in css
+
+
+def test_print_css_portrait_default_kept():
+    css = (_CSS / "print.css").read_text(encoding="utf-8")
+
+    # Landscape lives only in the reports page's page_css block, never here:
+    # this file serves the ticket-detail printout too.
+    assert "size: A4" in css
+    assert "landscape" not in css
+
+
+def test_phone_table_rules_screen_only():
+    css = (_CSS / "main.css").read_text(encoding="utf-8")
+
+    # Print viewports can match a bare max-width query; the stacked-phone
+    # table must never trigger when printing.
+    assert "@media screen and (max-width: 767.98px)" in css
+    assert "@media (max-width: 767.98px)" not in css
 
 
 def test_detail_print_hides_forms(client, user_factory, login, ticket_factory):

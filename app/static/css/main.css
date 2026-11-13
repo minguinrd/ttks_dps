@@ -347,7 +347,7 @@ a:focus-visible {
 /* Phones: the wide data tables become stacked rows, each cell labelled by
    its data-label attribute (mirrors the <th> text). Tables without a
    data-label — action cells — render as a right-aligned button row. */
-@media (max-width: 767.98px) {
+@media screen and (max-width: 767.98px) {
   .table-stack thead {
     display: none;
   }
