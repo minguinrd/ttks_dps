@@ -20,7 +20,15 @@ def upgrade():
     # SQLite DDL is non-transactional: an interrupted prior run can leave the
     # batch temp table behind and block every retry with
     # "table _alembic_tmp_tickets already exists". Clear any leftover first.
+    # Also clear a partial `categories` from a run interrupted after
+    # create_table but before or during the first batch, with the original
+    # `tickets` table intact: that whole window is recoverable — both drops
+    # clear the partial state and the backfill re-runs cleanly. An
+    # interruption after the first batch (tickets already carrying
+    # category_id) stays outside this house pattern's scope, as in the users
+    # batch precedent migrations.
     op.execute("DROP TABLE IF EXISTS _alembic_tmp_tickets")
+    op.execute("DROP TABLE IF EXISTS categories")
 
     op.create_table(
         "categories",

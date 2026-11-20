@@ -129,6 +129,7 @@ def test_upgrade_preserves_custom_category_values(tmp_path):
 
 
 def test_upgrade_recovers_from_leftover_category_temp_table(tmp_path):
+    """Retry after interruption post-create_table (categories + temp table, tickets intact)."""
     app = _fresh_app(tmp_path)
     result = _upgrade(app, "751feed02aec")
     assert result.exit_code == 0, result.output
@@ -136,6 +137,12 @@ def test_upgrade_recovers_from_leftover_category_temp_table(tmp_path):
 
     conn = sqlite3.connect(_db_path(app))
     conn.execute("CREATE TABLE _alembic_tmp_tickets (junk INTEGER)")
+    # This revision's own interrupted state: create_table landed, the seed
+    # insert and first batch did not — original tickets still intact.
+    conn.execute(
+        "CREATE TABLE categories (id INTEGER NOT NULL, name VARCHAR(100) NOT NULL,"
+        " PRIMARY KEY (id), UNIQUE (name))"
+    )
     conn.commit()
     conn.close()
 
@@ -145,6 +152,8 @@ def test_upgrade_recovers_from_leftover_category_temp_table(tmp_path):
     conn = sqlite3.connect(_db_path(app))
     tables = [row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")]
     assert "_alembic_tmp_tickets" not in tables
+    seeded = [row[0] for row in conn.execute("SELECT name FROM categories ORDER BY id")]
+    assert seeded == ["Hardware", "Software", "Network", "Access", "Other"]
     assert conn.execute("SELECT count(*) FROM tickets").fetchone()[0] == 1
     conn.close()
 
