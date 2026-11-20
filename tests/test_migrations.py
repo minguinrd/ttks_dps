@@ -172,6 +172,8 @@ def test_downgrade_restores_legacy_category_column(tmp_path):
     assert result.exit_code == 0, result.output
 
     conn = sqlite3.connect(_db_path(app))
+    version = conn.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+    assert version == "245bf1a60eae"
     cols = [row[1] for row in conn.execute("PRAGMA table_info(tickets)")]
     assert "category" in cols
     assert "category_id" not in cols

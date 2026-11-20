@@ -19,7 +19,7 @@ class TicketForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # The fixed enum option labels translate per request (literal keys);
+        # The priority labels are fixed enum labels that translate per request;
         # the submitted values stay the raw enum values.
         priority_labels = {
             "low": _("Low"),
