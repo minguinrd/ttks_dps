@@ -1,11 +1,20 @@
 from app.models.notification import Notification
 from app.models.setting import Setting
-from app.models.ticket import Category, Comment, InvalidTransition, Priority, Ticket, TicketStatus
+from app.models.ticket import (
+    DEFAULT_CATEGORIES,
+    Category,
+    Comment,
+    InvalidTransition,
+    Priority,
+    Ticket,
+    TicketStatus,
+)
 from app.models.user import Department, Role, User
 
 __all__ = [
     "Category",
     "Comment",
+    "DEFAULT_CATEGORIES",
     "Department",
     "InvalidTransition",
     "Notification",

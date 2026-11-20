@@ -12,12 +12,17 @@ class TicketStatus(StrEnum):
     closed = "closed"
 
 
-class Category(StrEnum):
-    hardware = "hardware"
-    software = "software"
-    network = "network"
-    access = "access"
-    other = "other"
+class Category(db.Model):
+    __tablename__ = "categories"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+
+    tickets = db.relationship("Ticket", back_populates="category")
+
+
+# Seed order = migration seed ids (1-5); tests import this from app.models.
+DEFAULT_CATEGORIES = ("Hardware", "Software", "Network", "Access", "Other")
 
 
 class Priority(StrEnum):
@@ -57,7 +62,7 @@ class Ticket(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subject = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    category = db.Column(db.String(20), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=False)
     priority = db.Column(db.String(20), nullable=False)
     status = db.Column(db.String(20), nullable=False, default="open")
     requester_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
@@ -76,6 +81,7 @@ class Ticket(db.Model):
     requester = db.relationship("User", foreign_keys=[requester_id])
     assignee = db.relationship("User", foreign_keys=[assignee_id])
     department = db.relationship("Department")
+    category = db.relationship("Category", back_populates="tickets")
     comments = db.relationship("Comment", back_populates="ticket", order_by="Comment.created_at")
 
     def add_system_comment(self, actor: User, text: str) -> Comment:

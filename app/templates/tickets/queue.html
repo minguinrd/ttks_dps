@@ -1,5 +1,5 @@
 {% extends "base.html" %} {% from "macros/badges.html" import status_badge, category_badge,
-priority_badge, status_label, category_label, priority_label %} {% block title %}{{ _("Queue") }}{% endblock %} {% block content %}
+priority_badge, status_label, priority_label %} {% block title %}{{ _("Queue") }}{% endblock %} {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">{{ _("Ticket Queue") }}</h1>
   <a class="btn btn-primary" href="{{ url_for('tickets.new') }}"
@@ -24,14 +24,14 @@ priority_badge, status_label, category_label, priority_label %} {% block title %
       </div>
       <div class="col-md">
         <label class="form-label" for="filter-category">{{ _("Category") }}</label>
-        <select class="form-select" id="filter-category" name="category">
+        <select class="form-select" id="filter-category" name="category_id">
           <option value="">{{ _("Any") }}</option>
-          {% for value in ["hardware", "software", "network", "access", "other"] %}
+          {% for category in categories %}
           <option
-            value="{{ value }}"
-            {% if request.args.get("category") == value %}selected{% endif %}
+            value="{{ category.id }}"
+            {% if (request.args.get("category_id") | int) == category.id %}selected{% endif %}
           >
-            {{ category_label(value) }}
+            {{ category.name }}
           </option>
           {% endfor %}
         </select>
@@ -119,7 +119,7 @@ priority_badge, status_label, category_label, priority_label %} {% block title %
           >
         </td>
         <td data-label="{{ _("Status") }}">{{ status_badge(ticket.status) }}</td>
-        <td data-label="{{ _("Category") }}">{{ category_badge(ticket.category) }}</td>
+        <td data-label="{{ _("Category") }}">{{ category_badge(ticket.category.name) }}</td>
         <td data-label="{{ _("Priority") }}">{{ priority_badge(ticket.priority) }}</td>
         <td data-label="{{ _("Requester") }}">
           {{ ticket.requester.full_name or ticket.requester.username }}

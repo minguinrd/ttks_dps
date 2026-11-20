@@ -4,7 +4,7 @@ from app.extensions import db
 from app.models import Comment, Department, Ticket
 
 
-def test_create_ticket_sets_fields_and_status(app, client, user_factory, login):
+def test_create_ticket_sets_fields_and_status(app, client, user_factory, login, category_ids):
     with app.app_context():
         department = Department(name="IT Support")
         db.session.add(department)
@@ -18,7 +18,7 @@ def test_create_ticket_sets_fields_and_status(app, client, user_factory, login):
         data={
             "subject": "Printer jams on floor 2",
             "description": "The printer jams on every other page.",
-            "category": "hardware",
+            "category_id": str(category_ids["Hardware"]),
             "priority": "high",
         },
     )
@@ -158,7 +158,7 @@ def test_cannot_comment_on_closed(app, client, user_factory, login, ticket_facto
         assert db.session.scalars(db.select(Comment).filter_by(ticket_id=ticket.id)).all() == []
 
 
-def test_requester_edits_while_open(app, client, user_factory, login, ticket_factory):
+def test_requester_edits_while_open(app, client, user_factory, login, ticket_factory, category_ids):
     owner = user_factory(username="owner-edit")
     ticket = ticket_factory(owner)
     updated_before = ticket.updated_at
@@ -169,7 +169,7 @@ def test_requester_edits_while_open(app, client, user_factory, login, ticket_fac
         data={
             "subject": "Updated subject",
             "description": "Updated description",
-            "category": "software",
+            "category_id": str(category_ids["Software"]),
             "priority": "urgent",
         },
     )
@@ -178,18 +178,20 @@ def test_requester_edits_while_open(app, client, user_factory, login, ticket_fac
     with app.app_context():
         row = db.session.get(Ticket, ticket.id)
         assert row.subject == "Updated subject"
-        assert row.category == "software"
+        assert row.category.name == "Software"
         assert row.priority == "urgent"
         assert row.updated_at > updated_before
 
 
-def test_requester_cannot_edit_assigned(app, client, user_factory, login, ticket_factory):
+def test_requester_cannot_edit_assigned(
+    app, client, user_factory, login, ticket_factory, category_ids
+):
     owner = user_factory(username="owner-assigned")
     agent = user_factory(username="assignee", role="agent")
     ticket = ticket_factory(
         owner,
         subject="Original subject",
-        category="hardware",
+        category="Hardware",
         priority="normal",
         status="assigned",
         assignee=agent,
@@ -201,7 +203,7 @@ def test_requester_cannot_edit_assigned(app, client, user_factory, login, ticket
         data={
             "subject": "Hijacked subject",
             "description": "Hijacked description",
-            "category": "other",
+            "category_id": str(category_ids["Other"]),
             "priority": "low",
         },
     )
@@ -210,14 +212,16 @@ def test_requester_cannot_edit_assigned(app, client, user_factory, login, ticket
     with app.app_context():
         row = db.session.get(Ticket, ticket.id)
         assert row.subject == "Original subject"
-        assert row.category == "hardware"
+        assert row.category.name == "Hardware"
         assert row.priority == "normal"
 
 
-def test_agent_edits_resolved_ticket(app, client, user_factory, login, ticket_factory):
+def test_agent_edits_resolved_ticket(
+    app, client, user_factory, login, ticket_factory, category_ids
+):
     owner = user_factory(username="owner-resolved")
     agent = user_factory(username="fixer", role="agent")
-    ticket = ticket_factory(owner, status="resolved", category="hardware")
+    ticket = ticket_factory(owner, status="resolved", category="Hardware")
     login(client, agent)
 
     resp = client.post(
@@ -225,7 +229,7 @@ def test_agent_edits_resolved_ticket(app, client, user_factory, login, ticket_fa
         data={
             "subject": "Recategorized subject",
             "description": "Recategorized description",
-            "category": "software",
+            "category_id": str(category_ids["Software"]),
             "priority": "normal",
         },
     )
@@ -234,11 +238,11 @@ def test_agent_edits_resolved_ticket(app, client, user_factory, login, ticket_fa
     with app.app_context():
         row = db.session.get(Ticket, ticket.id)
         assert row.subject == "Recategorized subject"
-        assert row.category == "software"
+        assert row.category.name == "Software"
         assert row.status == "resolved"
 
 
-def test_cannot_edit_closed(app, client, user_factory, login, ticket_factory):
+def test_cannot_edit_closed(app, client, user_factory, login, ticket_factory, category_ids):
     owner = user_factory(username="owner-frozen")
     agent = user_factory(username="closer", role="agent")
     ticket = ticket_factory(owner, status="closed", subject="Frozen subject")
@@ -249,7 +253,7 @@ def test_cannot_edit_closed(app, client, user_factory, login, ticket_factory):
         data={
             "subject": "Should not apply",
             "description": "Should not apply",
-            "category": "other",
+            "category_id": str(category_ids["Other"]),
             "priority": "low",
         },
     )
@@ -262,7 +266,7 @@ def test_cannot_edit_closed(app, client, user_factory, login, ticket_factory):
         data={
             "subject": "Should not apply either",
             "description": "Should not apply either",
-            "category": "other",
+            "category_id": str(category_ids["Other"]),
             "priority": "low",
         },
     )
@@ -271,3 +275,15 @@ def test_cannot_edit_closed(app, client, user_factory, login, ticket_factory):
     with app.app_context():
         row = db.session.get(Ticket, ticket.id)
         assert row.subject == "Frozen subject"
+
+
+def test_edit_form_prefills_current_category(app, client, user_factory, login, ticket_factory):
+    owner = user_factory(username="owner-prefill")
+    ticket = ticket_factory(owner, category="Network")
+    login(client, owner)
+
+    html = client.get(f"/tickets/{ticket.id}").get_data(as_text=True)
+
+    # coerce=int + FK id: the ticket's own category renders pre-selected
+    # (WTForms sorts attributes, so `selected` precedes `value`).
+    assert f'<option selected value="{ticket.category_id}">Network</option>' in html

@@ -31,7 +31,7 @@ priority_badge %} {% block title %}{{ _("My Tickets") }}{% endblock %} {% block 
           >
         </td>
         <td data-label="{{ _("Status") }}">{{ status_badge(ticket.status) }}</td>
-        <td data-label="{{ _("Category") }}">{{ category_badge(ticket.category) }}</td>
+        <td data-label="{{ _("Category") }}">{{ category_badge(ticket.category.name) }}</td>
         <td data-label="{{ _("Priority") }}">{{ priority_badge(ticket.priority) }}</td>
         <td data-label="{{ _("Created") }}">
           {{ ticket.created_at.strftime("%Y-%m-%d %H:%M") if ticket.created_at else "" }}

@@ -11,7 +11,7 @@ priority_badge %} {% from "macros/forms.html" import field_label, field_errors %
       </button>
     </div>
     <div class="mb-2">
-      {{ status_badge(ticket.status) }} {{ category_badge(ticket.category) }} {{
+      {{ status_badge(ticket.status) }} {{ category_badge(ticket.category.name) }} {{
       priority_badge(ticket.priority) }}
     </div>
     <dl class="row mb-0">
@@ -211,9 +211,9 @@ or is_staff) %}
       </div>
       <div class="row">
         <div class="col-md-6 mb-3">
-          {{ field_label(edit_form.category) }} {{
-          edit_form.category(class_="form-select" + (" is-invalid" if edit_form.category.errors else
-          "")) }} {{ field_errors(edit_form.category) }}
+          {{ field_label(edit_form.category_id) }} {{
+          edit_form.category_id(class_="form-select" + (" is-invalid" if edit_form.category_id.errors else
+          "")) }} {{ field_errors(edit_form.category_id) }}
         </div>
         <div class="col-md-6 mb-3">
           {{ field_label(edit_form.priority) }} {{

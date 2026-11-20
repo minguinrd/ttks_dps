@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models import (
+    DEFAULT_CATEGORIES,
     Category,
     Comment,
     Department,
@@ -19,6 +20,9 @@ def session(app):
     """Create the schema in the test database and yield a ready db.session."""
     with app.app_context():
         db.create_all()
+        # Mirror tests/conftest.py's db_schema: the five defaults exist for FK references.
+        db.session.add_all(Category(name=name) for name in DEFAULT_CATEGORIES)
+        db.session.commit()
         yield db.session
         db.session.rollback()
         db.session.remove()
@@ -81,10 +85,11 @@ def test_department_name_unique(session):
 def test_ticket_defaults(session):
     requester = User(username="alice")
     requester.set_password("pw")
+    hardware = db.session.scalar(db.select(Category).filter_by(name="Hardware"))
     ticket = Ticket(
         subject="Screen flicker",
         description="External monitor flickers.",
-        category=Category.hardware,
+        category=hardware,
         priority=Priority.low,
         requester=requester,
     )
@@ -102,10 +107,11 @@ def test_ticket_defaults(session):
 def test_comment_and_notification_roundtrip(session):
     requester = User(username="alice")
     requester.set_password("pw")
+    network = db.session.scalar(db.select(Category).filter_by(name="Network"))
     ticket = Ticket(
         subject="VPN down",
         description="Cannot reach the VPN gateway.",
-        category=Category.network,
+        category=network,
         priority=Priority.urgent,
         requester=requester,
     )

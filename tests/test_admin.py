@@ -370,29 +370,29 @@ def test_compute_dashboard_stats(app, user_factory, ticket_factory):
     now = datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
     ticket_factory(
         requester,
-        category="hardware",
+        category="Hardware",
         priority="low",
         created_at=now - timedelta(days=3),
     )
     ticket_factory(
         requester,
-        category="hardware",
+        category="Hardware",
         priority="low",
         created_at=now - timedelta(days=1),
     )
     ticket_factory(
-        requester, category="software", priority="high", status="assigned", assignee=agent
+        requester, category="Software", priority="high", status="assigned", assignee=agent
     )
     ticket_factory(
         requester,
-        category="software",
+        category="Software",
         priority="urgent",
         status="assigned",
         assignee=stale,
     )
     ticket_factory(
         requester,
-        category="other",
+        category="Other",
         priority="normal",
         status="resolved",
         assignee=agent,
@@ -400,7 +400,7 @@ def test_compute_dashboard_stats(app, user_factory, ticket_factory):
     )
     ticket_factory(
         requester,
-        category="other",
+        category="Other",
         priority="normal",
         status="resolved",
         assignee=agent,
@@ -410,7 +410,7 @@ def test_compute_dashboard_stats(app, user_factory, ticket_factory):
     # ticket is the oldest unassigned one.
     ticket_factory(
         requester,
-        category="network",
+        category="Network",
         priority="normal",
         status="closed",
         created_at=now - timedelta(days=10),
@@ -425,16 +425,28 @@ def test_compute_dashboard_stats(app, user_factory, ticket_factory):
         "resolved_this_week": 1,
         "pending_users": 2,
         "by_category": {
-            "hardware": 2,
-            "software": 2,
-            "network": 1,
-            "access": 0,
-            "other": 2,
+            "Hardware": 2,
+            "Software": 2,
+            "Network": 1,
+            "Access": 0,
+            "Other": 2,
         },
         "by_priority": {"low": 2, "normal": 3, "high": 1, "urgent": 1},
         "oldest_unassigned": now - timedelta(days=10),
         "stale_assignee": 1,
     }
+
+
+def test_dashboard_category_names_stay_verbatim(client, user_factory, login):
+    admin = user_factory(username="admin-catnames", role="admin", language="es")
+    login(client, admin)
+
+    html = client.get("/admin/").get_data(as_text=True)
+
+    # Category names are admin-entered data: the Spanish reader sees the
+    # seeded name verbatim, never its translation ("Acceso").
+    assert "Access" in html
+    assert "Acceso" not in html
 
 
 def test_dashboard_renders(client, user_factory, login):

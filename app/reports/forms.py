@@ -20,7 +20,7 @@ class ReportForm(FlaskForm):
     date_from = DateField(_("From"), validators=[Optional()])
     date_to = DateField(_("To"), validators=[Optional()])
     status = SelectField(_("Status"), validators=[Optional()], choices=_enum_choices(TicketStatus))
-    category = SelectField(_("Category"), validators=[Optional()], choices=_enum_choices(Category))
+    category_id = SelectField(_("Category"), validators=[Optional()])
     priority = SelectField(_("Priority"), validators=[Optional()], choices=_enum_choices(Priority))
     department_id = SelectField(_("Department"), validators=[Optional()])
     requester_id = SelectField(_("Requester"), validators=[Optional()])
@@ -44,13 +44,6 @@ class ReportForm(FlaskForm):
             "resolved": _("Resolved"),
             "closed": _("Closed"),
         }
-        category_labels = {
-            "hardware": _("Hardware"),
-            "software": _("Software"),
-            "network": _("Network"),
-            "access": _("Access"),
-            "other": _("Other"),
-        }
         priority_labels = {
             "low": _("Low"),
             "normal": _("Normal"),
@@ -60,8 +53,9 @@ class ReportForm(FlaskForm):
         self.status.choices = [SelectChoice("", _("Any"))] + [
             SelectChoice(choice.value, status_labels[choice.value]) for choice in TicketStatus
         ]
-        self.category.choices = [SelectChoice("", _("Any"))] + [
-            SelectChoice(choice.value, category_labels[choice.value]) for choice in Category
+        self.category_id.choices = [SelectChoice("", _("Any"))] + [
+            SelectChoice(category.id, category.name)
+            for category in db.session.scalars(db.select(Category).order_by(Category.name))
         ]
         self.priority.choices = [SelectChoice("", _("Any"))] + [
             SelectChoice(choice.value, priority_labels[choice.value]) for choice in Priority

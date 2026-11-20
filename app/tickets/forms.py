@@ -2,6 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import BooleanField, SelectChoice, SelectField, StringField, TextAreaField
 from wtforms.validators import DataRequired, Length
 
+from app.extensions import db
 from app.i18n import _
 from app.models import Category, Priority
 
@@ -9,11 +10,7 @@ from app.models import Category, Priority
 class TicketForm(FlaskForm):
     subject = StringField(_("Subject"), validators=[DataRequired(), Length(max=200)])
     description = TextAreaField(_("Description"), validators=[DataRequired()])
-    category = SelectField(
-        _("Category"),
-        validators=[DataRequired()],
-        choices=[SelectChoice(choice.value, choice.name.title()) for choice in Category],
-    )
+    category_id = SelectField(_("Category"), validators=[DataRequired()], coerce=int)
     priority = SelectField(
         _("Priority"),
         validators=[DataRequired()],
@@ -24,21 +21,15 @@ class TicketForm(FlaskForm):
         super().__init__(*args, **kwargs)
         # The fixed enum option labels translate per request (literal keys);
         # the submitted values stay the raw enum values.
-        category_labels = {
-            "hardware": _("Hardware"),
-            "software": _("Software"),
-            "network": _("Network"),
-            "access": _("Access"),
-            "other": _("Other"),
-        }
         priority_labels = {
             "low": _("Low"),
             "normal": _("Normal"),
             "high": _("High"),
             "urgent": _("Urgent"),
         }
-        self.category.choices = [
-            SelectChoice(choice.value, category_labels[choice.value]) for choice in Category
+        self.category_id.choices = [
+            SelectChoice(category.id, category.name)
+            for category in db.session.scalars(db.select(Category).order_by(Category.name))
         ]
         self.priority.choices = [
             SelectChoice(choice.value, priority_labels[choice.value]) for choice in Priority

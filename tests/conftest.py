@@ -4,7 +4,7 @@ import pytest
 
 from app import create_app
 from app.extensions import db
-from app.models import Ticket, User
+from app.models import DEFAULT_CATEGORIES, Category, Ticket, User
 
 
 @pytest.fixture()
@@ -38,6 +38,9 @@ def db_schema(app):
     """
     with app.app_context():
         db.create_all()
+        # The five defaults exist in every test DB, mirroring the migration seed.
+        db.session.add_all(Category(name=name) for name in DEFAULT_CATEGORIES)
+        db.session.commit()
     yield
     with app.app_context():
         db.session.remove()
@@ -72,13 +75,17 @@ def ticket_factory(app, db_schema):
     def _factory(requester, **overrides):
         overrides.setdefault("subject", "Broken monitor")
         overrides.setdefault("description", "The screen flickers constantly.")
-        overrides.setdefault("category", "hardware")
         overrides.setdefault("priority", "normal")
         overrides.setdefault("status", "open")
         if "assignee" in overrides:
             assignee = overrides.pop("assignee")
             overrides["assignee_id"] = assignee.id if assignee is not None else None
+        # `category` names a seeded row; tickets store the FK, not the name.
+        category_name = overrides.pop("category", "Hardware")
         with app.app_context():
+            category = db.session.scalar(db.select(Category).filter_by(name=category_name))
+            assert category is not None, f"unknown category name {category_name!r}"
+            overrides["category_id"] = category.id
             ticket = Ticket(requester_id=requester.id, **overrides)
             db.session.add(ticket)
             db.session.commit()
@@ -88,6 +95,16 @@ def ticket_factory(app, db_schema):
             return ticket
 
     return _factory
+
+
+@pytest.fixture()
+def category_ids(app, db_schema):
+    """Seeded category name -> id map (the five DEFAULT_CATEGORIES rows)."""
+    with app.app_context():
+        return {
+            name: db.session.scalar(db.select(Category).filter_by(name=name)).id
+            for name in DEFAULT_CATEGORIES
+        }
 
 
 @pytest.fixture()

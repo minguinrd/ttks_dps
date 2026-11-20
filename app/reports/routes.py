@@ -31,13 +31,16 @@ def _summarize(tickets: list[Ticket]) -> dict:
         "assigned": 0,
         "resolved": 0,
         "closed": 0,
-        "by_category": {category.value: 0 for category in Category},
+        "by_category": {
+            category.name: 0
+            for category in db.session.scalars(db.select(Category).order_by(Category.name))
+        },
         "by_priority": {priority.value: 0 for priority in Priority},
         "oldest_unassigned": None,
     }
     for ticket in tickets:
         summary[ticket.status] += 1
-        summary["by_category"][ticket.category] += 1
+        summary["by_category"][ticket.category.name] += 1
         summary["by_priority"][ticket.priority] += 1
         if ticket.status == TicketStatus.open and ticket.assignee_id is None:
             oldest = summary["oldest_unassigned"]
@@ -66,9 +69,9 @@ def index():
     status = request.args.get("status", "")
     if status:
         query = query.where(Ticket.status == status)
-    category = request.args.get("category", "")
-    if category:
-        query = query.where(Ticket.category == category)
+    category_id = request.args.get("category_id", type=int)
+    if category_id:
+        query = query.where(Ticket.category_id == category_id)
     priority = request.args.get("priority", "")
     if priority:
         query = query.where(Ticket.priority == priority)

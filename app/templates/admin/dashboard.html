@@ -1,4 +1,4 @@
-{% extends "base.html" %} {% from "macros/badges.html" import category_label, priority_label %} {% block title %}{{ _("Admin") }}{% endblock %} {% block content %}
+{% extends "base.html" %} {% from "macros/badges.html" import priority_label %} {% block title %}{{ _("Admin") }}{% endblock %} {% block content %}
 <h1 class="h4 mb-3">{{ _("Admin Dashboard") }}</h1>
 
 <div class="row g-3 mb-4">
@@ -47,7 +47,7 @@
         <tbody>
           {% for name, count in stats.by_category.items() %}
           <tr>
-            <td>{{ category_label(name) }}</td>
+            <td>{{ name }}</td>
             <td class="text-end">{{ count }}</td>
           </tr>
           {% endfor %}

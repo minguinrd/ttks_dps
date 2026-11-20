@@ -5,7 +5,16 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.i18n import _
-from app.models import Comment, Department, InvalidTransition, Role, Ticket, TicketStatus, User
+from app.models import (
+    Category,
+    Comment,
+    Department,
+    InvalidTransition,
+    Role,
+    Ticket,
+    TicketStatus,
+    User,
+)
 from app.notifications import notify
 from app.permissions import role_required
 from app.tickets import tickets_bp
@@ -33,9 +42,9 @@ def queue():
     status = request.args.get("status", "")
     if status:
         query = query.where(Ticket.status == status)
-    category = request.args.get("category", "")
-    if category:
-        query = query.where(Ticket.category == category)
+    category_id = request.args.get("category_id", type=int)
+    if category_id:
+        query = query.where(Ticket.category_id == category_id)
     priority = request.args.get("priority", "")
     if priority:
         query = query.where(Ticket.priority == priority)
@@ -51,6 +60,7 @@ def queue():
         # SQLite hands back naive UTC datetimes; keep ``now`` naive so the age column can subtract.
         now=datetime.now(timezone.utc).replace(tzinfo=None),
         departments=db.session.scalars(db.select(Department).order_by(Department.name)).all(),
+        categories=db.session.scalars(db.select(Category).order_by(Category.name)).all(),
         users=db.session.scalars(db.select(User).order_by(User.username)).all(),
     )
 
@@ -63,7 +73,7 @@ def new():
         ticket = Ticket(
             subject=form.subject.data,
             description=form.description.data,
-            category=form.category.data,
+            category_id=form.category_id.data,
             priority=form.priority.data,
             status=TicketStatus.open,
             requester_id=current_user.id,
@@ -128,7 +138,7 @@ def edit(ticket_id):
     if form.validate_on_submit():
         ticket.subject = form.subject.data
         ticket.description = form.description.data
-        ticket.category = form.category.data
+        ticket.category_id = form.category_id.data
         ticket.priority = form.priority.data
         db.session.commit()
         flash(_("Ticket updated."), "success")

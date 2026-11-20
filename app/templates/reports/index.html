@@ -1,5 +1,5 @@
 {% extends "base.html" %} {% from "macros/badges.html" import status_badge, category_badge,
-priority_badge, category_label, priority_label %} {% from "macros/forms.html" import field_label %} {% block title %}{{ _("Reports") }}{% endblock %} {% block page_css %}
+priority_badge, priority_label %} {% from "macros/forms.html" import field_label %} {% block title %}{{ _("Reports") }}{% endblock %} {% block page_css %}
 <style>
   /* Scoped to this document: print.css keeps portrait A4 for the
      ticket-detail printout; this later @page wins the cascade. */
@@ -30,7 +30,7 @@ priority_badge, category_label, priority_label %} {% from "macros/forms.html" im
         {{ field_label(form.status) }} {{ form.status(class_="form-select") }}
       </div>
       <div class="col-md">
-        {{ field_label(form.category) }} {{ form.category(class_="form-select") }}
+        {{ field_label(form.category_id) }} {{ form.category_id(class_="form-select") }}
       </div>
       <div class="col-md">
         {{ field_label(form.priority) }} {{ form.priority(class_="form-select") }}
@@ -108,7 +108,7 @@ priority_badge, category_label, priority_label %} {% from "macros/forms.html" im
           <tbody>
             {% for name, count in summary.by_category.items() %}
             <tr>
-              <td>{{ category_label(name) }}</td>
+              <td>{{ name }}</td>
               <td class="text-end">{{ count }}</td>
             </tr>
             {% endfor %}
@@ -177,7 +177,7 @@ priority_badge, category_label, priority_label %} {% from "macros/forms.html" im
             >
           </td>
           <td data-label="{{ _("Status") }}">{{ status_badge(ticket.status) }}</td>
-          <td data-label="{{ _("Category") }}">{{ category_badge(ticket.category) }}</td>
+          <td data-label="{{ _("Category") }}">{{ category_badge(ticket.category.name) }}</td>
           <td data-label="{{ _("Priority") }}">{{ priority_badge(ticket.priority) }}</td>
           <td data-label="{{ _("Requester") }}">
             {{ ticket.requester.full_name or ticket.requester.username }}

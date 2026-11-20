@@ -40,6 +40,9 @@ def compute_dashboard_stats() -> dict:
             counts[value] = count
         return counts
 
+    categories = db.session.scalars(db.select(Category).order_by(Category.name)).all()
+    category_counts = breakdown(Ticket.category_id, [category.id for category in categories])
+
     return {
         "open": db.session.scalar(
             db.select(db.func.count(Ticket.id)).where(Ticket.status == TicketStatus.open)
@@ -53,7 +56,7 @@ def compute_dashboard_stats() -> dict:
         "pending_users": db.session.scalar(
             db.select(db.func.count(User.id)).where(User.status == "pending")
         ),
-        "by_category": breakdown(Ticket.category, [item.value for item in Category]),
+        "by_category": {category.name: category_counts[category.id] for category in categories},
         "by_priority": breakdown(Ticket.priority, [item.value for item in Priority]),
         "oldest_unassigned": db.session.scalar(
             db.select(db.func.min(Ticket.created_at)).where(Ticket.assignee_id.is_(None))

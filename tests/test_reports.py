@@ -31,12 +31,12 @@ def test_reports_requires_agent(app, client, user_factory, login):
 def test_reports_renders_summary_and_list(client, user_factory, login, ticket_factory):
     agent = user_factory(role="agent")
     requester = user_factory(username="reports-req")
-    ticket_factory(requester, subject="PRINTER-ON-FIRE", category="hardware", priority="high")
-    ticket_factory(requester, subject="MAIL-BOUNCES", category="software", priority="normal")
+    ticket_factory(requester, subject="PRINTER-ON-FIRE", category="Hardware", priority="high")
+    ticket_factory(requester, subject="MAIL-BOUNCES", category="Software", priority="normal")
     ticket_factory(
         requester,
         subject="VPN-DROPS",
-        category="hardware",
+        category="Hardware",
         priority="low",
         status="assigned",
         assignee=agent,
@@ -44,13 +44,13 @@ def test_reports_renders_summary_and_list(client, user_factory, login, ticket_fa
     ticket_factory(
         requester,
         subject="PASSWORD-RESET",
-        category="other",
+        category="Other",
         priority="urgent",
         status="resolved",
         assignee=agent,
     )
     ticket_factory(
-        requester, subject="OLD-MONITOR", category="network", priority="normal", status="closed"
+        requester, subject="OLD-MONITOR", category="Network", priority="normal", status="closed"
     )
     login(client, agent)
 
@@ -67,7 +67,7 @@ def test_reports_renders_summary_and_list(client, user_factory, login, ticket_fa
     assert "Assigned 1" in text
     assert "Resolved 1" in text
     assert "Closed 1" in text
-    assert "hardware 2" in text
+    assert "Hardware 2" in text
     assert "normal 2" in text
 
 
@@ -111,6 +111,21 @@ def test_reports_status_filter(client, user_factory, login, ticket_factory):
     html = resp.get_data(as_text=True)
     assert "STILL-OPEN" in html
     assert "ALREADY-CLOSED" not in html
+
+
+def test_reports_category_filter(client, user_factory, login, ticket_factory, category_ids):
+    agent = user_factory(role="agent")
+    requester = user_factory(username="reports-cat-req")
+    ticket_factory(requester, subject="NETWORK-ISSUE", category="Network")
+    ticket_factory(requester, subject="HARDWARE-ISSUE", category="Hardware")
+    login(client, agent)
+
+    resp = client.get(f"/reports?category_id={category_ids['Network']}")
+
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    assert "NETWORK-ISSUE" in html
+    assert "HARDWARE-ISSUE" not in html
 
 
 def test_reports_page_declares_landscape_page(client, user_factory, login, ticket_factory):
