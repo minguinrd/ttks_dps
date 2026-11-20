@@ -8,7 +8,13 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
 from app.admin import admin_bp
-from app.admin.forms import AdminUserForm, BrandingForm, DepartmentForm, ResetPasswordForm
+from app.admin.forms import (
+    AdminUserForm,
+    BrandingForm,
+    CategoryForm,
+    DepartmentForm,
+    ResetPasswordForm,
+)
 from app.backup import run_backup_cycle
 from app.branding import get_branding, get_setting, set_setting
 from app.extensions import db
@@ -248,6 +254,64 @@ def department_edit(department_id):
     if not form.is_submitted():
         form.name.data = department.name
     return render_template("admin/department_edit.html", form=form, department=department)
+
+
+@admin_bp.route("/categories", methods=["GET", "POST"])
+@login_required
+@role_required("admin")
+def categories():
+    form = CategoryForm()
+    if form.validate_on_submit():
+        db.session.add(Category(name=form.name.data))
+        db.session.commit()
+        flash(_("Category created."), "success")
+        return redirect(url_for("admin.categories"))
+    return render_template(
+        "admin/categories.html",
+        form=form,
+        categories=db.session.scalars(db.select(Category).order_by(Category.name)).all(),
+    )
+
+
+@admin_bp.route("/categories/<int:category_id>/delete", methods=["POST"])
+@login_required
+@role_required("admin")
+def category_delete(category_id):
+    category = db.session.get(Category, category_id)
+    if category is None:
+        abort(404)
+    # Tickets hold a foreign key to the category (enforced by SQLite).
+    ticket_count = db.session.scalar(
+        db.select(db.func.count(Ticket.id)).where(Ticket.category_id == category.id)
+    )
+    if ticket_count:
+        flash(_("Cannot delete a category that still has tickets."), "danger")
+        return redirect(url_for("admin.categories"))
+    if db.session.scalar(db.select(db.func.count(Category.id))) <= 1:
+        flash(_("Cannot delete the last remaining category."), "danger")
+        return redirect(url_for("admin.categories"))
+    db.session.delete(category)
+    db.session.commit()
+    flash(_("Category deleted."), "success")
+    return redirect(url_for("admin.categories"))
+
+
+@admin_bp.route("/categories/<int:category_id>/edit", methods=["GET", "POST"])
+@login_required
+@role_required("admin")
+def category_edit(category_id):
+    category = db.session.get(Category, category_id)
+    if category is None:
+        abort(404)
+    form = CategoryForm(edit_category=category)
+    if form.validate_on_submit():
+        category.name = form.name.data
+        db.session.commit()
+        flash(_("Category updated."), "success")
+        return redirect(url_for("admin.categories"))
+    if not form.is_submitted():
+        form.name.data = category.name
+    return render_template("admin/category_edit.html", form=form, category=category)
 
 
 @admin_bp.route("/branding", methods=["GET", "POST"])

@@ -16,7 +16,7 @@ from wtforms.validators import (
 
 from app.extensions import db
 from app.i18n import _
-from app.models import Department, Role, User
+from app.models import Category, Department, Role, User
 
 LOGO_EXTENSIONS = {".png", ".jpg", ".jpeg", ".svg"}
 LOGO_TOO_LARGE_ERROR = _("File too large (max 2 MB).")
@@ -103,6 +103,32 @@ class DepartmentForm(FlaskForm):
         if self.edit_department is not None and existing.id == self.edit_department.id:
             return
         raise ValidationError(_("Department name already taken."))
+
+
+class CategoryForm(FlaskForm):
+    """Create or rename a category.
+
+    Pass ``edit_category`` when renaming: the duplicate check then skips the
+    row being edited, so the category may keep its own name.
+    """
+
+    name = StringField(_("Name"), validators=[DataRequired(), Length(max=100)])
+    submit = SubmitField(_("Add category"))
+
+    def __init__(self, *args, edit_category: Category | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.edit_category = edit_category
+        if edit_category is not None:
+            self.submit.label.text = "Save"
+
+    def validate_name(self, field):
+        existing = db.session.scalar(db.select(Category).filter_by(name=field.data))
+        if existing is None:
+            return
+        # Renaming keeps the current name valid: only *other* rows collide.
+        if self.edit_category is not None and existing.id == self.edit_category.id:
+            return
+        raise ValidationError(_("Category name already taken."))
 
 
 class BrandingForm(FlaskForm):

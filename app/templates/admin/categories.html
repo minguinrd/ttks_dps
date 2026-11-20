@@ -1,0 +1,62 @@
+{% extends "base.html" %} {% from "macros/forms.html" import field_label, field_errors %} {% block title %}{{ _("Categories") }}{% endblock %} {% block content %}
+<h1 class="h4 mb-3">{{ _("Categories") }}</h1>
+
+<form method="post" class="card shadow-sm mb-3" novalidate>
+  <div class="card-body">
+    {{ form.hidden_tag() }}
+    <div class="row g-2 align-items-end">
+      <div class="col-md">
+        {{ field_label(form.name) }} {{
+        form.name(class_="form-control" + (" is-invalid" if form.name.errors else "")) }}
+        {{ field_errors(form.name) }}
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary">
+          <i class="ph ph-plus" aria-hidden="true"></i>{{ _(form.submit.label.text) }}
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+
+{% if categories %}
+<div class="card shadow-sm">
+  <table class="table align-middle mb-0 table-stack">
+    <thead>
+      <tr>
+        <th>{{ _("Name") }}</th>
+        <th>{{ _("Tickets") }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for category in categories %}
+      <tr>
+        <td data-label="{{ _("Name") }}">{{ category.name }}</td>
+        <td data-label="{{ _("Tickets") }}">{{ category.tickets | length }}</td>
+        <td class="text-end">
+          <a
+            class="btn btn-outline-secondary btn-sm"
+            href="{{ url_for('admin.category_edit', category_id=category.id) }}"
+            ><i class="ph ph-pencil-simple" aria-hidden="true"></i>{{ _("Edit") }}</a
+          >
+          <form
+            method="post"
+            action="{{ url_for('admin.category_delete', category_id=category.id) }}"
+            class="d-inline"
+            data-confirm="{{ _("Delete this category?") }}"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-danger btn-sm">
+              <i class="ph ph-trash" aria-hidden="true"></i>{{ _("Delete") }}
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card card-body shadow-sm text-muted empty-state">{{ _("No categories yet.") }}</div>
+{% endif %} {% endblock %}

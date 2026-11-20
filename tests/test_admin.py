@@ -2,14 +2,14 @@ from datetime import datetime, timedelta, timezone
 
 from app.admin.routes import compute_dashboard_stats
 from app.extensions import db
-from app.models import Department, User
+from app.models import Category, Department, User
 
 
 def test_agent_forbidden_from_admin(client, user_factory, login):
     agent = user_factory(username="admin-nope", role="agent")
     login(client, agent)
 
-    for path in ("/admin/", "/admin/users"):
+    for path in ("/admin/", "/admin/users", "/admin/categories"):
         resp = client.get(path)
 
         assert resp.status_code == 403
@@ -359,6 +359,155 @@ def test_department_edit_missing_404(client, user_factory, login):
     assert resp.status_code == 404
 
 
+def test_category_crud(app, client, user_factory, login, ticket_factory):
+    admin = user_factory(username="admin-cat", role="admin")
+    requester = user_factory(username="cat-req")
+    ticket_factory(requester, category="Hardware")
+    login(client, admin)
+
+    resp = client.post("/admin/categories", data={"name": "Printers"})
+
+    assert resp.status_code == 302
+    with app.app_context():
+        category = db.session.scalar(db.select(Category).filter_by(name="Printers"))
+        assert category is not None
+        category_id = category.id
+
+    resp = client.get("/admin/categories")
+
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    assert "Printers" in html
+    assert "Hardware" in html
+    # Ticket-count column: the seeded Hardware row carries the one ticket.
+    assert '<td data-label="Tickets">1</td>' in html
+    assert '<td data-label="Tickets">0</td>' in html
+
+    resp = client.post(f"/admin/categories/{category_id}/delete")
+
+    assert resp.status_code == 302
+    with app.app_context():
+        assert db.session.get(Category, category_id) is None
+
+
+def test_delete_category_with_tickets_blocked(app, client, user_factory, login, ticket_factory):
+    admin = user_factory(username="admin-catblock", role="admin")
+    requester = user_factory(username="catblock-req")
+    ticket_factory(requester, category="Hardware")
+    with app.app_context():
+        hardware_id = db.session.scalar(db.select(Category).filter_by(name="Hardware")).id
+    login(client, admin)
+
+    resp = client.post(f"/admin/categories/{hardware_id}/delete", follow_redirects=True)
+
+    assert resp.status_code == 200
+    assert "Cannot delete a category that still has tickets." in resp.get_data(as_text=True)
+    with app.app_context():
+        assert db.session.get(Category, hardware_id) is not None
+
+
+def test_delete_last_category_blocked(app, client, user_factory, login, category_ids):
+    admin = user_factory(username="admin-catlast", role="admin")
+    with app.app_context():
+        for name in ("Hardware", "Software", "Network", "Access"):
+            db.session.delete(db.session.get(Category, category_ids[name]))
+        db.session.commit()
+        last_id = category_ids["Other"]
+    login(client, admin)
+
+    resp = client.post(f"/admin/categories/{last_id}/delete", follow_redirects=True)
+
+    assert resp.status_code == 200
+    assert "Cannot delete the last remaining category." in resp.get_data(as_text=True)
+    with app.app_context():
+        assert db.session.get(Category, last_id) is not None
+        assert db.session.scalar(db.select(db.func.count(Category.id))) == 1
+
+
+def test_category_rename(app, client, user_factory, login):
+    # Shape: test_department_rename — POST /admin/categories/<id>/edit {"name": "R&D"},
+    # assert 302, Location == "/admin/categories", row renamed.
+    admin = user_factory(username="admin-catrename", role="admin")
+    with app.app_context():
+        category = Category(name="Alpha")
+        db.session.add(category)
+        db.session.commit()
+        category_id = category.id
+    login(client, admin)
+
+    resp = client.post(f"/admin/categories/{category_id}/edit", data={"name": "R&D"})
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/admin/categories"
+    with app.app_context():
+        assert db.session.get(Category, category_id).name == "R&D"
+
+
+def test_category_rename_duplicate_rejected(app, client, user_factory, login):
+    # Shape: test_department_rename_duplicate_rejected — two rows, rename first
+    # to the second's name, assert 200 + "Category name already taken." and
+    # both rows unchanged.
+    admin = user_factory(username="admin-catdup", role="admin")
+    with app.app_context():
+        first = Category(name="Alpha")
+        second = Category(name="Beta")
+        db.session.add_all([first, second])
+        db.session.commit()
+        first_id, second_id = first.id, second.id
+    login(client, admin)
+
+    resp = client.post(f"/admin/categories/{first_id}/edit", data={"name": "Beta"})
+
+    assert resp.status_code == 200
+    assert "Category name already taken." in resp.get_data(as_text=True)
+    with app.app_context():
+        assert db.session.get(Category, first_id).name == "Alpha"
+        assert db.session.get(Category, second_id).name == "Beta"
+
+
+def test_category_rename_keep_own_name(app, client, user_factory, login):
+    # Shape: test_department_rename_keep_own_name — rename to its own name, assert 302.
+    admin = user_factory(username="admin-catkeep", role="admin")
+    with app.app_context():
+        category = Category(name="Gamma")
+        db.session.add(category)
+        db.session.commit()
+        category_id = category.id
+    login(client, admin)
+
+    resp = client.post(f"/admin/categories/{category_id}/edit", data={"name": "Gamma"})
+
+    assert resp.status_code == 302
+
+
+def test_category_edit_forbidden_for_agent(app, client, user_factory, login):
+    # Shape: test_department_edit_forbidden_for_agent — agent POST edit, assert 403,
+    # row unchanged.
+    agent = user_factory(username="admin-catagent", role="agent")
+    with app.app_context():
+        category = Category(name="Delta")
+        db.session.add(category)
+        db.session.commit()
+        category_id = category.id
+    login(client, agent)
+
+    resp = client.post(f"/admin/categories/{category_id}/edit", data={"name": "Omega"})
+
+    assert resp.status_code == 403
+    with app.app_context():
+        assert db.session.get(Category, category_id).name == "Delta"
+
+
+def test_category_edit_missing_404(client, user_factory, login):
+    # Shape: test_department_edit_missing_404 — POST /admin/categories/999999/edit, assert 404.
+    admin = user_factory(username="admin-catmissing", role="admin")
+    login(client, admin)
+
+    resp = client.post("/admin/categories/999999/edit", data={"name": "Ghost"})
+
+    assert resp.status_code == 404
+
+
 def test_compute_dashboard_stats(app, user_factory, ticket_factory):
     requester = user_factory(username="admin-stats-req")
     agent = user_factory(username="admin-stats-agent", role="agent")
@@ -456,3 +605,4 @@ def test_dashboard_renders(client, user_factory, login):
     resp = client.get("/admin/")
 
     assert resp.status_code == 200
+    assert 'href="/admin/categories"' in resp.get_data(as_text=True)
