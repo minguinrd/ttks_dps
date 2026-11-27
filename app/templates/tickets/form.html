@@ -1,27 +1,92 @@
-{% extends "base.html" %} {% from "macros/forms.html" import field %} {% block title %}{{ _("New Ticket") }}{% endblock %} {% block content %}
-<div class="auth-shell auth-shell-wide mt-0">
-  <div class="page-head">
-    <div>
-      <h1>{{ _("New ticket") }}</h1>
-      <p>{{ _("Describe the problem; the support team is notified straight away.") }}</p>
+{% extends "base.html" %} {% from "macros/forms.html" import field, field_errors %} {% from "macros/badges.html" import status_badge, priority_label, when %} {% block title %}{{ _("New Ticket") }}{% endblock %} {% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ _("New ticket") }}</h1>
+    <p>{{ _("Describe the problem; the support team is notified straight away.") }}</p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="panel p-4">
+      {# data-draft keeps unsent text in this tab (sessionStorage) and warns
+         before leaving with unsaved changes; see app.js. #}
+      <form method="post" novalidate data-draft="new-ticket-{{ current_user.id }}">
+        {{ form.hidden_tag() }}
+        {{ field(form.subject, autofocus=not form.errors, maxlength="200", autocomplete="off", placeholder=_("e.g. The printer on floor 2 does not print")) }}
+        {{ field(form.description, rows="7", hint=_("What happened, since when, and what you already tried. Include any error message word for word.")) }}
+        {{ field(form.category_id, class="form-select") }}
+
+        {# Priority as described choices: people pick better when each level
+           says what it means. Values are the raw enum values. #}
+        {% set described = {
+          "low": _("Minor annoyance; it can wait."),
+          "normal": _("Something does not work, but there is a workaround."),
+          "high": _("It stops me from doing my work."),
+          "urgent": _("Several people or a critical service are down."),
+        } %}
+        <fieldset class="mb-4" {% if form.priority.errors %}aria-describedby="{{ form.priority.id }}-error"{% endif %}>
+          <legend class="form-label">{{ _(form.priority.label.text) }}</legend>
+          <div class="priority-choices">
+            {% for choice in form.priority.choices %}
+            <label class="priority-choice priority-{{ choice.value }}">
+              <input
+                type="radio"
+                name="{{ form.priority.name }}"
+                value="{{ choice.value }}"
+                {% if form.priority.data == choice.value %}checked{% endif %}
+              />
+              <span class="choice-head">
+                <span class="signal" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                {{ choice.label }}
+              </span>
+              <span class="choice-text">{{ described[choice.value] }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {{ field_errors(form.priority) }}
+        </fieldset>
+
+        <p class="form-text mb-3">
+          <i class="ph ph-buildings" aria-hidden="true"></i>
+          {% if current_user.department %}{{ _("Filed under your department: {name}.", name=current_user.department.name) }}{% else %}{{ _("Your account has no department; an admin can set one.") }}{% endif %}
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>{{ _("Create ticket") }}
+          </button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('tickets.mine') }}" data-draft-discard>{{ _("Cancel") }}</a>
+        </div>
+      </form>
     </div>
   </div>
-  <div class="panel p-4">
-    <form method="post" novalidate>
-      {{ form.hidden_tag() }}
-      {{ field(form.subject, autofocus=True, placeholder=_("e.g. The printer on floor 2 does not print")) }}
-      {{ field(form.description, rows="6", hint=_("What happened, since when, and what you already tried.")) }}
-      <div class="row">
-        {{ field(form.category_id, class="form-select", wrapper="col-md-6 mb-3") }}
-        {{ field(form.priority, class="form-select", wrapper="col-md-6 mb-3") }}
-      </div>
-      <div class="d-flex flex-wrap gap-2">
-        <button type="submit" class="btn btn-primary">
-          <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>{{ _("Create ticket") }}
-        </button>
-        <a class="btn btn-outline-secondary" href="{{ url_for('tickets.mine') }}">{{ _("Cancel") }}</a>
-      </div>
-    </form>
-  </div>
+
+  <aside class="col-lg-4">
+    {% if pending %}
+    <section class="panel mb-3" aria-labelledby="pending-title">
+      <h2 class="panel-title" id="pending-title">{{ _("Already reported?") }}</h2>
+      <p class="small text-muted">{{ _("You have these tickets in progress. If it is the same problem, add a comment there instead.") }}</p>
+      <ul class="related-list">
+        {% for ticket in pending %}
+        <li>
+          <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}"
+            ><span class="text-muted">#{{ ticket.id }}</span> {{ ticket.subject }}</a
+          >
+          {{ status_badge(ticket.status) }}
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+    <section class="panel tips" aria-labelledby="tips-title">
+      <h2 class="panel-title" id="tips-title">{{ _("A good ticket gets solved faster") }}</h2>
+      <ul>
+        <li>{{ _("One problem per ticket.") }}</li>
+        <li>{{ _("A subject that says what fails, not just “Help”.") }}</li>
+        <li>{{ _("Where it happens: device, program, room.") }}</li>
+        <li>{{ _("What you see: the exact error, or a description of the screen.") }}</li>
+      </ul>
+    </section>
+  </aside>
 </div>
 {% endblock %}

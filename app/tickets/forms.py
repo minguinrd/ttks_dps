@@ -15,6 +15,8 @@ class TicketForm(FlaskForm):
         _("Priority"),
         validators=[DataRequired()],
         choices=[SelectChoice(choice.value, choice.name.title()) for choice in Priority],
+        # Most problems are "normal"; starting at "low" undersold them.
+        default=Priority.normal.value,
     )
 
     def __init__(self, *args, **kwargs):

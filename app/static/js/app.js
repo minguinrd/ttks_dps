@@ -90,6 +90,84 @@ document.querySelectorAll("[data-theme-toggle]").forEach(function (button) {
   });
 });
 
+// Forms with data-draft keep unsent text in this tab (sessionStorage, so it
+// dies with the tab) and ask before the page is left with unsaved changes.
+// Submitting or following a [data-draft-discard] link drops the draft.
+document.querySelectorAll("form[data-draft]").forEach(function (form) {
+  var key = "draft:" + form.getAttribute("data-draft");
+  var fields = Array.from(form.elements).filter(function (el) {
+    return el.name && el.name !== "csrf_token" && el.type !== "hidden" && el.type !== "submit";
+  });
+  var dirty = false;
+  var serverFilled = fields.some(function (el) {
+    return (el.type === "text" || el.tagName === "TEXTAREA") && el.value.trim();
+  });
+
+  function store() {
+    var data = {};
+    fields.forEach(function (el) {
+      if (el.type === "radio") {
+        if (el.checked) data[el.name] = el.value;
+      } else {
+        data[el.name] = el.value;
+      }
+    });
+    try {
+      sessionStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      /* storage full or disabled: the warning below still protects the text */
+    }
+  }
+
+  function drop() {
+    dirty = false;
+    try {
+      sessionStorage.removeItem(key);
+    } catch (e) {}
+  }
+
+  // Restore only into an untouched form: a re-rendered form (validation
+  // errors) already carries what was posted.
+  if (!serverFilled) {
+    try {
+      var saved = JSON.parse(sessionStorage.getItem(key) || "null");
+      if (saved) {
+        fields.forEach(function (el) {
+          if (!(el.name in saved)) return;
+          if (el.type === "radio") el.checked = el.value === saved[el.name];
+          else el.value = saved[el.name];
+        });
+        dirty = true;
+      }
+    } catch (e) {}
+  }
+
+  // Re-rendered after a failed submit: what is on screen is still unsent.
+  if (form.querySelector("[aria-invalid=true]")) {
+    dirty = true;
+    store();
+  }
+
+  form.addEventListener("input", function () {
+    dirty = true;
+    store();
+  });
+  form.addEventListener("change", store);
+  form.addEventListener("submit", drop);
+  form.querySelectorAll("[data-draft-discard]").forEach(function (link) {
+    link.addEventListener("click", drop);
+  });
+  window.addEventListener("beforeunload", function (event) {
+    if (!dirty) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+});
+
+// After a failed submit, put the cursor on the first field with an error.
+var firstInvalid = document.querySelector("main [aria-invalid=true]");
+if (firstInvalid) firstInvalid.focus();
+
 // Ctrl/Cmd + Enter sends a textarea's form (the comment composer).
 document.addEventListener("keydown", function (event) {
   var field = event.target;

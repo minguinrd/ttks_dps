@@ -259,7 +259,6 @@
   "Unread": "No leída",
   "Updated": "Actualizado",
   "Open a ticket or check how yours are going.": "Abre un ticket o consulta cómo van los tuyos.",
-  "What happened, since when, and what you already tried.": "Qué ocurre, desde cuándo y qué has probado ya.",
   "When something stops working, open a ticket and the support team will pick it up.": "Cuando algo deje de funcionar, abre un ticket y el equipo de soporte se encargará.",
   "You will see updates on your tickets here.": "Aquí verás las novedades de tus tickets.",
   "e.g. The printer on floor 2 does not print": "p. ej. La impresora de la planta 2 no imprime",
@@ -368,5 +367,19 @@
   "{n} of your tickets have been resolved.": "Se han resuelto {n} de tus tickets.",
   "One of your tickets has been resolved.": "Se ha resuelto uno de tus tickets.",
   "Check the fix and close it, or reopen it if the problem is still there.": "Comprueba la solución y ciérralo, o reábrelo si el problema sigue.",
-  "Dark mode": "Modo oscuro"
+  "Dark mode": "Modo oscuro",
+  "A good ticket gets solved faster": "Un buen ticket se resuelve antes",
+  "A subject that says what fails, not just “Help”.": "Un asunto que diga qué falla, no solo «Ayuda».",
+  "Already reported?": "¿Ya lo has comunicado?",
+  "Filed under your department: {name}.": "Se registrará en tu departamento: {name}.",
+  "It stops me from doing my work.": "Me impide hacer mi trabajo.",
+  "Minor annoyance; it can wait.": "Una molestia menor; puede esperar.",
+  "One problem per ticket.": "Un problema por ticket.",
+  "Several people or a critical service are down.": "Afecta a varias personas o a un servicio crítico.",
+  "Something does not work, but there is a workaround.": "Algo no funciona, pero hay una alternativa.",
+  "What happened, since when, and what you already tried. Include any error message word for word.": "Qué ha pasado, desde cuándo y qué has probado ya. Copia los mensajes de error tal cual.",
+  "What you see: the exact error, or a description of the screen.": "Qué ves: el error exacto o una descripción de la pantalla.",
+  "Where it happens: device, program, room.": "Dónde ocurre: equipo, programa, sala.",
+  "You have these tickets in progress. If it is the same problem, add a comment there instead.": "Tienes estos tickets en curso. Si es el mismo problema, añade un comentario allí en lugar de abrir otro.",
+  "Your account has no department; an admin can set one.": "Tu cuenta no tiene departamento; un administrador puede asignártelo."
 }

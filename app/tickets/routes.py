@@ -237,7 +237,15 @@ def new():
         db.session.commit()
         flash(_("Ticket created."), "success")
         return redirect(url_for("tickets.detail", ticket_id=ticket.id))
-    return render_template("tickets/form.html", form=form)
+    # The requester's pending tickets: a nudge to comment instead of opening a
+    # duplicate.
+    pending = db.session.scalars(
+        db.select(Ticket)
+        .where(Ticket.requester_id == current_user.id, Ticket.status.in_(_ACTIVE))
+        .order_by(Ticket.updated_at.desc())
+        .limit(5)
+    ).all()
+    return render_template("tickets/form.html", form=form, pending=pending)
 
 
 @tickets_bp.route("/<int:ticket_id>")
