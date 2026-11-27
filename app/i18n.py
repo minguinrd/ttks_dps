@@ -71,7 +71,7 @@ def _match_pattern(catalog: dict[str, str], message: str) -> str | None:
         match = re.fullmatch(pattern, message)
         if match:
             try:
-                return template.format(**dict(zip(names, match.groups())))
+                return template.format(**dict(zip(names, match.groups(), strict=True)))
             except (KeyError, IndexError):
                 continue  # placeholder names in the translation drifted; try the next key
     return None

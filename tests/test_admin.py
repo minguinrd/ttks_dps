@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.admin.routes import compute_dashboard_stats
 from app.extensions import db
@@ -516,7 +516,7 @@ def test_compute_dashboard_stats(app, user_factory, ticket_factory):
     user_factory(username="admin-stats-pend2", status="pending")
 
     # SQLite hands back naive UTC datetimes; seed in the same shape.
-    now = datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
+    now = datetime.now(UTC).replace(tzinfo=None, microsecond=0)
     ticket_factory(
         requester,
         category="Hardware",

@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 _CSS = Path(__file__).resolve().parents[1] / "app" / "static" / "css"
@@ -75,7 +75,7 @@ def test_reports_date_filter_scopes_summary(client, user_factory, login, ticket_
     agent = user_factory(role="agent")
     requester = user_factory(username="reports-dates-req")
     # SQLite hands back naive UTC datetimes; seed in the same shape.
-    now = datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
+    now = datetime.now(UTC).replace(tzinfo=None, microsecond=0)
     ticket_factory(requester, subject="OLD-THREE-DAYS", created_at=now - timedelta(days=3))
     ticket_factory(
         requester,

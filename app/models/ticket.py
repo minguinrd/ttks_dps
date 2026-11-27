@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from app.extensions import db
@@ -49,7 +49,7 @@ class Comment(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     body = db.Column(db.Text, nullable=False)
     is_internal = db.Column(db.Boolean, nullable=False, default=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     ticket = db.relationship("Ticket", back_populates="comments")
     author = db.relationship("User")
@@ -69,11 +69,11 @@ class Ticket(db.Model):
     assignee_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     department_id = db.Column(db.Integer, db.ForeignKey("departments.id"))
     resolution_note = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     updated_at = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
     resolved_at = db.Column(db.DateTime)
     closed_at = db.Column(db.DateTime)
@@ -126,7 +126,7 @@ class Ticket(db.Model):
         self._require_status(TicketStatus.assigned)
         self.status = TicketStatus.resolved
         self.resolution_note = note
-        self.resolved_at = datetime.now(timezone.utc)
+        self.resolved_at = datetime.now(UTC)
         self.add_system_comment(actor, f"Resolved by {_display_name(actor)}.")
 
     def reopen(self, actor: User) -> None:
@@ -139,5 +139,5 @@ class Ticket(db.Model):
         """``open|assigned|resolved → closed``: freeze the ticket and stamp the close time."""
         self._require_status(TicketStatus.open, TicketStatus.assigned, TicketStatus.resolved)
         self.status = TicketStatus.closed
-        self.closed_at = datetime.now(timezone.utc)
+        self.closed_at = datetime.now(UTC)
         self.add_system_comment(actor, f"Closed by {_display_name(actor)}.")

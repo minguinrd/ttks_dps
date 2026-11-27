@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
@@ -35,11 +35,11 @@ def compute_dashboard_stats() -> dict:
     assignee is not an active user.
     """
     # SQLite stores naive UTC datetimes; keep cutoffs in the same shape.
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
     week_ago = now - timedelta(days=7)
 
     def breakdown(column, values):
-        counts = {value: 0 for value in values}
+        counts = dict.fromkeys(values, 0)
         for value, count in db.session.execute(
             db.select(column, db.func.count(Ticket.id)).group_by(column)
         ):

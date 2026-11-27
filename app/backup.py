@@ -7,7 +7,7 @@ button and the scheduler thread started by ``create_app``.
 import sqlite3
 import threading
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from flask import Flask, current_app
@@ -31,7 +31,7 @@ def create_backup() -> Path:
     """
     backup_dir = Path(current_app.config["BACKUP_DIR"])
     backup_dir.mkdir(parents=True, exist_ok=True)
-    target = backup_dir / f"ttks_dps-{datetime.now(timezone.utc):%Y%m%d-%H%M%S}.db"
+    target = backup_dir / f"ttks_dps-{datetime.now(UTC):%Y%m%d-%H%M%S}.db"
     conn = sqlite3.connect(db_path_from_uri(current_app.config["SQLALCHEMY_DATABASE_URI"]))
     try:
         # SQLite evaluates the target as an expression, so a bound parameter works.

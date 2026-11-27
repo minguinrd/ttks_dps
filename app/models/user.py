@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from flask_login import UserMixin
@@ -39,11 +39,11 @@ class User(UserMixin, db.Model):
     avatar_path = db.Column(db.String(255))
     # UI display language ("en" / "es" — see app.i18n.SUPPORTED).
     language = db.Column(db.String(5), nullable=False, default="es", server_default="es")
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     updated_at = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     department = db.relationship("Department", back_populates="users")

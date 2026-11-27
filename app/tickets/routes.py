@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -58,7 +58,7 @@ def queue():
         "tickets/queue.html",
         tickets=db.session.scalars(query).all(),
         # SQLite hands back naive UTC datetimes; keep ``now`` naive so the age column can subtract.
-        now=datetime.now(timezone.utc).replace(tzinfo=None),
+        now=datetime.now(UTC).replace(tzinfo=None),
         departments=db.session.scalars(db.select(Department).order_by(Department.name)).all(),
         categories=db.session.scalars(db.select(Category).order_by(Category.name)).all(),
         users=db.session.scalars(db.select(User).order_by(User.username)).all(),

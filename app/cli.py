@@ -1,7 +1,7 @@
 import os
 import shutil
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import click
@@ -53,7 +53,7 @@ def restore_backup(path: str | None) -> None:
     if source.resolve() == live.resolve():
         raise click.ClickException("refusing to restore the live database over itself")
     if live.exists():
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
         shutil.copy2(live, Path(current_app.config["DATA_DIR"]) / f"pre-restore-{stamp}.db")
     shutil.copy2(source, live)
     for sidecar in (Path(f"{live}-wal"), Path(f"{live}-shm")):
