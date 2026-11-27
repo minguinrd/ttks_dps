@@ -1,36 +1,26 @@
-{% extends "base.html" %} {% from "macros/forms.html" import field_label, field_errors %} {% block title %}{{ _("Sign in") }}{% endblock %} {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-5 col-lg-4">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h1 class="h4 mb-3">{{ _("Sign in") }}</h1>
-        <form method="post" novalidate>
-          {{ form.hidden_tag() }}
-          <div class="mb-3">
-            {{ field_label(form.username) }}
-            {{ form.username(class_="form-control" + (" is-invalid" if form.username.errors else "")) }}
-            {{ field_errors(form.username) }}
-          </div>
-          <div class="mb-3">
-            {{ field_label(form.password) }}
-            {{ form.password(class_="form-control" + (" is-invalid" if form.password.errors else "")) }}
-            {{ field_errors(form.password) }}
-          </div>
-          <button type="submit" class="btn btn-primary w-100">
-            <i class="ph ph-sign-in" aria-hidden="true"></i>{{ _(form.submit.label.text) }}
-          </button>
-        </form>
-        {% if google_enabled %}
-        <hr />
-        <a href="{{ url_for('auth.google') }}" class="btn btn-outline-secondary w-100"
-          ><i class="ph ph-google-logo" aria-hidden="true"></i>{{ _("Sign in with Google") }}</a
-        >
-        {% endif %}
-        <p class="mt-3 mb-0">
-          {{ _("No account yet?") }} <a href="{{ url_for('auth.register') }}">{{ _("Register") }}</a>
-        </p>
-      </div>
-    </div>
+{% extends "base.html" %} {% from "macros/forms.html" import field %} {% from "macros/auth.html" import auth_brand with context %} {% block title %}{{ _("Sign in") }}{% endblock %} {% block content %}
+<div class="auth-shell">
+  {{ auth_brand() }}
+  <div class="panel p-4">
+    <h1 class="h4 mb-1">{{ _("Sign in") }}</h1>
+    <p class="text-muted mb-4">{{ _("Open a ticket or check how yours are going.") }}</p>
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+      {{ field(form.username, autocomplete="username", autocapitalize="none", spellcheck="false", autofocus=True) }}
+      {{ field(form.password, autocomplete="current-password") }}
+      <button type="submit" class="btn btn-primary w-100">
+        <i class="ph ph-sign-in" aria-hidden="true"></i>{{ _(form.submit.label.text) }}
+      </button>
+    </form>
+    {% if google_enabled %}
+    <div class="divider-text">{{ _("or") }}</div>
+    <a href="{{ url_for('auth.google') }}" class="btn btn-outline-secondary w-100"
+      ><i class="ph ph-google-logo" aria-hidden="true"></i>{{ _("Sign in with Google") }}</a
+    >
+    {% endif %}
   </div>
+  <p class="text-center mt-3">
+    {{ _("No account yet?") }} <a href="{{ url_for('auth.register') }}">{{ _("Register") }}</a>
+  </p>
 </div>
 {% endblock %}

@@ -1,39 +1,45 @@
-{% extends "base.html" %} {% block title %}{{ _("Notifications") }}{% endblock %} {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h4 mb-0">{{ _("Notifications") }}</h1>
-  <form method="post" action="{{ url_for('main.notifications_read_all') }}">
+{% extends "base.html" %} {% from "macros/badges.html" import when %} {% block title %}{{ _("Notifications") }}{% endblock %} {% block content %}
+{% set unread_total = notifications | rejectattr("is_read") | list | length %}
+<div class="page-head">
+  <h1>{{ _("Notifications") }}</h1>
+  {% if unread_total %}
+  <form method="post" action="{{ url_for('main.notifications_read_all') }}" class="no-print">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
     <button class="btn btn-outline-secondary btn-sm" type="submit">
-      <i class="ph ph-check" aria-hidden="true"></i>{{ _("Mark all as read") }}
+      <i class="ph ph-checks" aria-hidden="true"></i>{{ _("Mark all as read") }}
     </button>
   </form>
+  {% endif %}
 </div>
 {% if notifications %}
-<div class="card shadow-sm">
-  <ul class="list-group list-group-flush">
+<div class="panel p-0">
+  <ul class="notice-list">
     {% for notification in notifications %}
     {% set params = notification.parsed_params %}
     {% set text = _(notification.message_key, **params) if notification.message_key and params else notification.message %}
-    <li class="list-group-item d-flex justify-content-between align-items-center">
+    <li class="notice{% if not notification.is_read %} is-unread{% endif %}">
+      <span class="dot" aria-hidden="true"></span>
       <form
         method="post"
         action="{{ url_for('main.notification_read', notification_id=notification.id) }}"
+        class="no-print"
       >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <button class="btn btn-link p-0 text-start" type="submit">
           {% if not notification.is_read %}
-          <strong>{{ text }}</strong>
+          <span class="visually-hidden">{{ _("Unread") }}:</span> <strong>{{ text }}</strong>
           {% else %}{{ text }}{% endif %}
         </button>
       </form>
-      <span class="text-muted small"
-        >{{ notification.created_at.strftime("%Y-%m-%d %H:%M") if notification.created_at else
-        "" }}</span
-      >
+      {{ when(notification.created_at) }}
     </li>
     {% endfor %}
   </ul>
 </div>
 {% else %}
-<div class="card card-body shadow-sm text-muted empty-state">{{ _("No notifications yet.") }}</div>
+<div class="panel empty-state">
+  <i class="ph ph-bell-simple-slash" aria-hidden="true"></i>
+  <span class="empty-title">{{ _("No notifications yet.") }}</span>
+  {{ _("You will see updates on your tickets here.") }}
+</div>
 {% endif %} {% endblock %}

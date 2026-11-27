@@ -1,50 +1,30 @@
-{% extends "base.html" %} {% from "macros/forms.html" import field_label, field_errors %} {% block title %}{{ _("Register") }}{% endblock %} {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6 col-lg-5">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h1 class="h4 mb-3">{{ _("Register") }}</h1>
-        <form method="post" novalidate>
-          {{ form.hidden_tag() }}
-          <div class="mb-3">
-            {{ field_label(form.username) }}
-            {{ form.username(class_="form-control" + (" is-invalid" if form.username.errors else "")) }}
-            {{ field_errors(form.username) }}
-          </div>
-          <div class="mb-3">
-            {{ field_label(form.full_name) }}
-            {{ form.full_name(class_="form-control" + (" is-invalid" if form.full_name.errors else "")) }}
-            {{ field_errors(form.full_name) }}
-          </div>
-          <div class="mb-3">
-            {{ field_label(form.email) }}
-            {{ form.email(class_="form-control" + (" is-invalid" if form.email.errors else "")) }}
-            {{ field_errors(form.email) }}
-          </div>
-          <div class="mb-3">
-            {{ field_label(form.department) }}
-            {{ form.department(class_="form-select" + (" is-invalid" if form.department.errors else "")) }}
-            {{ field_errors(form.department) }}
-          </div>
-          <div class="mb-3">
-            {{ field_label(form.password) }}
-            {{ form.password(class_="form-control" + (" is-invalid" if form.password.errors else "")) }}
-            {{ field_errors(form.password) }}
-          </div>
-          <div class="mb-3">
-            {{ field_label(form.confirm) }}
-            {{ form.confirm(class_="form-control" + (" is-invalid" if form.confirm.errors else "")) }}
-            {{ field_errors(form.confirm) }}
-          </div>
-          <button type="submit" class="btn btn-primary w-100">
-            <i class="ph ph-user-plus" aria-hidden="true"></i>{{ _(form.submit.label.text) }}
-          </button>
-        </form>
-        <p class="mt-3 mb-0">
-          {{ _("Already registered?") }} <a href="{{ url_for('auth.login') }}">{{ _("Sign in") }}</a>
-        </p>
+{% extends "base.html" %} {% from "macros/forms.html" import field %} {% from "macros/auth.html" import auth_brand with context %} {% block title %}{{ _("Register") }}{% endblock %} {% block content %}
+<div class="auth-shell auth-shell-wide">
+  {{ auth_brand() }}
+  <div class="panel p-4">
+    <h1 class="h4 mb-1">{{ _("Register") }}</h1>
+    <p class="text-muted mb-4">{{ _("An administrator reviews new accounts before you can sign in.") }}</p>
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="row">
+        {{ field(form.full_name, wrapper="col-md-6 mb-3", autocomplete="name") }}
+        {{ field(form.username, wrapper="col-md-6 mb-3", autocomplete="username", autocapitalize="none", spellcheck="false") }}
       </div>
-    </div>
+      <div class="row">
+        {{ field(form.email, wrapper="col-md-6 mb-3", type="email", autocomplete="email") }}
+        {{ field(form.department, class="form-select", wrapper="col-md-6 mb-3") }}
+      </div>
+      <div class="row">
+        {{ field(form.password, wrapper="col-md-6 mb-3", autocomplete="new-password", hint=_("At least 8 characters.")) }}
+        {{ field(form.confirm, wrapper="col-md-6 mb-3", autocomplete="new-password") }}
+      </div>
+      <button type="submit" class="btn btn-primary w-100">
+        <i class="ph ph-user-plus" aria-hidden="true"></i>{{ _(form.submit.label.text) }}
+      </button>
+    </form>
   </div>
+  <p class="text-center mt-3">
+    {{ _("Already registered?") }} <a href="{{ url_for('auth.login') }}">{{ _("Sign in") }}</a>
+  </p>
 </div>
 {% endblock %}

@@ -1,0 +1,9 @@
+{# The uploaded logo, large, above the sign-in / register cards. Without a
+   logo the top bar already carries the site name, so nothing repeats here. #}
+{% macro auth_brand() -%}
+{%- if branding.has_logo %}
+<div class="auth-brand">
+  <img src="{{ branding.logo_url }}" alt="{{ branding.site_name }}" />
+</div>
+{%- endif %}
+{%- endmacro %}

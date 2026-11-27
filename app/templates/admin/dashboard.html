@@ -1,101 +1,84 @@
 {% extends "base.html" %} {% from "macros/badges.html" import priority_label %} {% block title %}{{ _("Admin") }}{% endblock %} {% block content %}
-<h1 class="h4 mb-3">{{ _("Admin Dashboard") }}</h1>
+<div class="page-head">
+  <h1>{{ _("Admin Dashboard") }}</h1>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.users') }}"
+      ><i class="ph ph-users" aria-hidden="true"></i>{{ _("Manage users") }}</a
+    >
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.departments') }}"
+      ><i class="ph ph-buildings" aria-hidden="true"></i>{{ _("Manage departments") }}</a
+    >
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.categories') }}"
+      ><i class="ph ph-tag" aria-hidden="true"></i>{{ _("Manage categories") }}</a
+    >
+  </div>
+</div>
 
-<div class="row g-3 mb-4">
-  <div class="col-md-3">
-    <div class="card shadow-sm text-center">
-      <div class="card-body">
-        <div class="fs-2 fw-semibold">{{ stats.open }}</div>
-        <div class="text-muted">{{ _("Open tickets") }}</div>
-      </div>
-    </div>
+<div class="figures">
+  <a class="figure text-reset text-decoration-none" href="{{ url_for('tickets.queue', status='open') }}">
+    <span class="value">{{ stats.open }}</span>
+    <span class="label">{{ _("Open tickets") }}</span>
+  </a>
+  <a class="figure text-reset text-decoration-none" href="{{ url_for('tickets.queue', status='assigned') }}">
+    <span class="value">{{ stats.assigned }}</span>
+    <span class="label">{{ _("Assigned tickets") }}</span>
+  </a>
+  <div class="figure">
+    <span class="value">{{ stats.resolved_this_week }}</span>
+    <span class="label">{{ _("Resolved this week") }}</span>
   </div>
-  <div class="col-md-3">
-    <div class="card shadow-sm text-center">
-      <div class="card-body">
-        <div class="fs-2 fw-semibold">{{ stats.assigned }}</div>
-        <div class="text-muted">{{ _("Assigned tickets") }}</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card shadow-sm text-center">
-      <div class="card-body">
-        <div class="fs-2 fw-semibold">{{ stats.resolved_this_week }}</div>
-        <div class="text-muted">{{ _("Resolved this week") }}</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card shadow-sm text-center">
-      <div class="card-body">
-        <div class="fs-2 fw-semibold">{{ stats.pending_users }}</div>
-        <div class="text-muted">{{ _("Pending users") }}</div>
-        {% if stats.pending_users %}
-        <a class="small" href="{{ url_for('admin.users', status='pending') }}">{{ _("Review") }}</a>
-        {% endif %}
-      </div>
-    </div>
+  <div class="figure{% if stats.pending_users %} is-alert{% endif %}">
+    <span class="value">{{ stats.pending_users }}</span>
+    <span class="label">{{ _("Pending users") }}</span>
+    {% if stats.pending_users %}
+    <a class="d-block small fw-bold" href="{{ url_for('admin.users', status='pending') }}">{{ _("Review") }}</a>
+    {% endif %}
   </div>
 </div>
 
 <div class="row g-3">
+  {% set cat_max = [stats.by_category.values() | max if stats.by_category else 0, 1] | max %}
   <div class="col-md-4">
-    <div class="card shadow-sm">
-      <div class="card-header">{{ _("By category") }}</div>
-      <table class="table mb-0">
-        <tbody>
-          {% for name, count in stats.by_category.items() %}
-          <tr>
-            <td>{{ name }}</td>
-            <td class="text-end">{{ count }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card shadow-sm">
-      <div class="card-header">{{ _("By priority") }}</div>
-      <table class="table mb-0">
-        <tbody>
-          {% for name, count in stats.by_priority.items() %}
-          <tr>
-            <td>{{ priority_label(name) }}</td>
-            <td class="text-end">{{ count }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card shadow-sm">
-      <div class="card-header">{{ _("Needs attention") }}</div>
-      <ul class="list-group list-group-flush">
-        <li class="list-group-item d-flex justify-content-between">
-          {{ _("Oldest unassigned ticket") }}
-          <span>{{ stats.oldest_unassigned or "—" }}</span>
+    <section class="panel h-100">
+      <h2 class="panel-title">{{ _("By category") }}</h2>
+      <ul class="dist">
+        {% for name, count in stats.by_category.items() %}
+        <li>
+          <span>{{ name }}</span><span class="num">{{ count }}</span>
+          <span class="bar" aria-hidden="true"><span style="--w: {{ (count / cat_max * 100) | round(1) }}%"></span></span>
         </li>
-        <li class="list-group-item d-flex justify-content-between">
-          {{ _("Tickets with a stale assignee") }}
-          <span>{{ stats.stale_assignee }}</span>
-        </li>
+        {% endfor %}
       </ul>
-    </div>
+    </section>
   </div>
-</div>
-
-<div class="mt-3">
-  <a class="btn btn-outline-primary" href="{{ url_for('admin.users') }}"
-    ><i class="ph ph-users" aria-hidden="true"></i>{{ _("Manage users") }}</a
-  >
-  <a class="btn btn-outline-primary" href="{{ url_for('admin.departments') }}"
-    ><i class="ph ph-buildings" aria-hidden="true"></i>{{ _("Manage departments") }}</a
-  >
-  <a class="btn btn-outline-primary" href="{{ url_for('admin.categories') }}"
-    ><i class="ph ph-tag" aria-hidden="true"></i>{{ _("Manage categories") }}</a
-  >
+  {% set pr_max = [stats.by_priority.values() | max, 1] | max %}
+  {% set pr_colors = {"urgent": "var(--pr-urgent)", "high": "var(--pr-high)", "normal": "var(--pr-normal)", "low": "var(--pr-low)"} %}
+  <div class="col-md-4">
+    <section class="panel h-100">
+      <h2 class="panel-title">{{ _("By priority") }}</h2>
+      <ul class="dist">
+        {% for name in ["urgent", "high", "normal", "low"] if name in stats.by_priority %}
+        {% set count = stats.by_priority[name] %}
+        <li>
+          <span>{{ priority_label(name) }}</span><span class="num">{{ count }}</span>
+          <span class="bar" aria-hidden="true"
+            ><span style="--w: {{ (count / pr_max * 100) | round(1) }}%; --bar: {{ pr_colors[name] }}"></span
+          ></span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+  <div class="col-md-4">
+    <section class="panel h-100">
+      <h2 class="panel-title">{{ _("Needs attention") }}</h2>
+      <dl class="facts">
+        <dt>{{ _("Oldest unassigned ticket") }}</dt>
+        <dd>{{ stats.oldest_unassigned.strftime("%Y-%m-%d %H:%M") if stats.oldest_unassigned else "—" }}</dd>
+        <dt>{{ _("Tickets with a stale assignee") }}</dt>
+        <dd class="num">{{ stats.stale_assignee }}</dd>
+      </dl>
+    </section>
+  </div>
 </div>
 {% endblock %}

@@ -251,14 +251,20 @@
   "New Ticket": "Nuevo ticket",
   "Actions": "Acciones",
   "Administration": "Administración",
+  "An administrator reviews new accounts before you can sign in.": "Un administrador revisa las cuentas nuevas antes de que puedas iniciar sesión.",
+  "At least 8 characters.": "Mínimo 8 caracteres.",
   "Describe the problem; the support team is notified straight away.": "Describe el problema; el equipo de soporte recibe el aviso al momento.",
   "Details": "Detalles",
   "Main": "Principal",
   "Skip to main content": "Saltar al contenido principal",
   "Tickets you opened or that are assigned to you.": "Tickets que abriste o que tienes asignados.",
   "Unassigned": "Sin asignar",
+  "Unread": "No leída",
   "Updated": "Actualizado",
+  "Open a ticket or check how yours are going.": "Abre un ticket o consulta cómo van los tuyos.",
   "What happened, since when, and what you already tried.": "Qué ocurre, desde cuándo y qué has probado ya.",
   "When something stops working, open a ticket and the support team will pick it up.": "Cuando algo deje de funcionar, abre un ticket y el equipo de soporte se encargará.",
-  "e.g. The printer on floor 2 does not print": "p. ej. La impresora de la planta 2 no imprime"
+  "You will see updates on your tickets here.": "Aquí verás las novedades de tus tickets.",
+  "e.g. The printer on floor 2 does not print": "p. ej. La impresora de la planta 2 no imprime",
+  "or": "o"
 }

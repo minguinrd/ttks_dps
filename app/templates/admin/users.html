@@ -49,7 +49,7 @@
             >{{ labels.get(user.status, user.status) }}</span
           >
         </td>
-        <td class="text-end">
+        <td class="text-end text-nowrap">
           <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.user_edit', user_id=user.id) }}"
             ><i class="ph ph-pencil-simple" aria-hidden="true"></i>{{ _("Edit") }}</a
           >
@@ -71,7 +71,7 @@
             data-confirm="{{ _("Reject this registration? The account will be suspended.") }}"
           >
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-danger btn-sm">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
               <i class="ph ph-x-circle" aria-hidden="true"></i>{{ _("Reject") }}
             </button>
           </form>
@@ -83,7 +83,7 @@
             data-confirm="{{ _("Suspend this user? They will no longer be able to log in.") }}"
           >
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-danger btn-sm">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
               <i class="ph ph-pause-circle" aria-hidden="true"></i>{{ _("Suspend") }}
             </button>
           </form>

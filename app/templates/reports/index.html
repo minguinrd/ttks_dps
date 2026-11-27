@@ -9,9 +9,9 @@ priority_badge, priority_label %} {% from "macros/forms.html" import field_label
   }
 </style>
 {% endblock %} {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h4 mb-0">{{ _("Reports") }}</h1>
-  <button class="btn btn-secondary no-print" onclick="window.print()">
+<div class="page-head">
+  <h1>{{ _("Reports") }}</h1>
+  <button class="btn btn-outline-secondary no-print" onclick="window.print()">
     <i class="ph ph-printer" aria-hidden="true"></i>{{ _("Print / Save as PDF") }}
   </button>
 </div>
@@ -20,30 +20,30 @@ priority_badge, priority_label %} {% from "macros/forms.html" import field_label
 <form method="get" action="{{ url_for('reports.index') }}" class="card shadow-sm mb-3 no-print">
   <div class="card-body">
     <div class="row g-2 align-items-end">
-      <div class="col-md">
+      <div class="col-6 col-md-4 col-xl-3">
         {{ field_label(form.date_from) }} {{ form.date_from(class_="form-control") }}
       </div>
-      <div class="col-md">
+      <div class="col-6 col-md-4 col-xl-3">
         {{ field_label(form.date_to) }} {{ form.date_to(class_="form-control") }}
       </div>
-      <div class="col-md">
+      <div class="col-6 col-md-4 col-xl-3">
         {{ field_label(form.status) }} {{ form.status(class_="form-select") }}
       </div>
-      <div class="col-md">
+      <div class="col-6 col-md-4 col-xl-3">
         {{ field_label(form.category_id) }} {{ form.category_id(class_="form-select") }}
       </div>
-      <div class="col-md">
+      <div class="col-6 col-md-4 col-xl-3">
         {{ field_label(form.priority) }} {{ form.priority(class_="form-select") }}
       </div>
-      <div class="col-md">
+      <div class="col-6 col-md-4 col-xl-3">
         {{ field_label(form.department_id) }} {{
         form.department_id(class_="form-select") }}
       </div>
-      <div class="col-md">
+      <div class="col-6 col-md-4 col-xl-3">
         {{ field_label(form.requester_id) }} {{
         form.requester_id(class_="form-select") }}
       </div>
-      <div class="col-auto">
+      <div class="col-12 col-xl-3 d-flex gap-2">
         <button type="submit" class="btn btn-primary">
           <i class="ph ph-funnel" aria-hidden="true"></i>{{ _("Apply") }}
         </button>
