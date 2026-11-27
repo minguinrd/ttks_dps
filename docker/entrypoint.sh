@@ -1,6 +1,7 @@
 #!/bin/sh
-set -e
+set -eu
 
 flask db upgrade
 flask seed-admin
-exec gunicorn -w 2 -b 0.0.0.0:8000 wsgi:app
+# exec: gunicorn becomes PID 1 and receives SIGTERM from `docker stop`.
+exec gunicorn --config gunicorn.conf.py wsgi:app

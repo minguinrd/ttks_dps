@@ -5,17 +5,24 @@ services:
       - "8000:8000"
     environment:
       DATA_DIR: /data
-      SECRET_KEY: ${SECRET_KEY}
-      ADMIN_USERNAME: ${ADMIN_USERNAME}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      # Required: compose refuses to start with a clear error when unset.
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?set ADMIN_USERNAME in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
       # Optional Google sign-in; empty defaults keep the feature off.
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       BACKUP_HOUR: ${BACKUP_HOUR:-03:00}
       BACKUP_KEEP: ${BACKUP_KEEP:-7}
+      # Set to true when served over HTTPS; TRUSTED_PROXIES=1 behind one reverse proxy.
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-0}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
     volumes:
       - ttks_data:/data
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   ttks_data:

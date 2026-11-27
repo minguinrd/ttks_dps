@@ -41,6 +41,13 @@ def test_security_headers_on_every_response(client, db_schema):
     assert resp.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
 
 
+def test_healthz_is_public_and_checks_the_database(client, db_schema):
+    resp = client.get("/healthz")
+
+    assert resp.status_code == 200
+    assert resp.get_json() == {"status": "ok"}
+
+
 def test_login_follows_local_next(client, user_factory):
     user = user_factory(username="next-local")
 

@@ -45,6 +45,13 @@ def index():
     return redirect("/tickets/queue")
 
 
+@main_bp.route("/healthz")
+def healthz():
+    """Liveness/readiness probe for Docker and load balancers (no auth, no session)."""
+    db.session.execute(db.text("SELECT 1"))
+    return {"status": "ok"}
+
+
 @main_bp.route("/notifications")
 @login_required
 def notifications():
