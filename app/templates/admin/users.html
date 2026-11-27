@@ -1,45 +1,85 @@
-{% extends "base.html" %} {% from "macros/badges.html" import role_label %} {% block title %}{{ _("Users") }}{% endblock %} {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h4 mb-0">{{ _("Users") }}</h1>
+{% extends "base.html" %} {% from "macros/badges.html" import role_label, avatar, when %} {% block title %}{{ _("Users") }}{% endblock %} {% block content %}
+<div class="page-head">
+  <h1>{{ _("Users") }}</h1>
   <a class="btn btn-primary" href="{{ url_for('admin.user_new') }}"
     ><i class="ph ph-plus" aria-hidden="true"></i>{{ _("New user") }}</a
   >
 </div>
 
-{# Tabs narrow the list via ?status=; the default shows everyone. #}
-<ul class="nav nav-tabs mb-3">
-  {% for tab, label in [("all", _("All")), ("pending", _("Pending")), ("active", _("Active")),
-  ("suspended", _("Suspended"))] %}
-  <li class="nav-item">
-    <a
-      class="nav-link {% if status == tab %}active{% endif %}"
-      href="{{ url_for('admin.users', status=tab) }}"
-      >{{ label }}</a
-    >
-  </li>
-  {% endfor %}
-</ul>
+{# Tabs narrow the list via ?status=; the default shows everyone. Search and
+   role filter carry across tabs, and the counts honour them. #}
+{% set kept = {} %}{% if search %}{% set _void = kept.update(q=search) %}{% endif %}{% if role %}{% set _void = kept.update(role=role) %}{% endif %}
+<nav aria-label="{{ _("Status") }}">
+  <ul class="status-tabs">
+    {% for tab, label in [("all", _("All")), ("pending", _("Pending")), ("active", _("Active")),
+    ("suspended", _("Suspended"))] %}
+    <li>
+      <a href="{{ url_for('admin.users', status=tab, **kept) }}" {% if status == tab %}aria-current="page"{% endif %}
+        >{{ label }} <span class="count">{{ counts[tab] }}</span></a
+      >
+    </li>
+    {% endfor %}
+  </ul>
+</nav>
+
+<form method="get" action="{{ url_for('admin.users') }}" class="filter-bar" role="search">
+  <input type="hidden" name="status" value="{{ status }}" />
+  <div class="filter filter-grow">
+    <label class="form-label" for="user-search">{{ _("Search") }}</label>
+    <input
+      class="form-control"
+      type="search"
+      id="user-search"
+      name="q"
+      value="{{ search }}"
+      maxlength="100"
+      placeholder="{{ _("Name, username or email") }}"
+    />
+  </div>
+  <div class="filter">
+    <label class="form-label" for="user-role">{{ _("Role") }}</label>
+    <select class="form-select" id="user-role" name="role">
+      <option value="">{{ _("Any") }}</option>
+      {% for value in ["user", "agent", "admin"] %}
+      <option value="{{ value }}" {% if role == value %}selected{% endif %}>{{ role_label(value) | capitalize }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-actions">
+    <button type="submit" class="btn btn-primary"><i class="ph ph-magnifying-glass" aria-hidden="true"></i>{{ _("Search") }}</button>
+    {% if search or role %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.users', status=status) }}">{{ _("Reset") }}</a>
+    {% endif %}
+  </div>
+</form>
 
 {% if users %}
-<div class="card shadow-sm">
-  <table class="table table-hover align-middle mb-0 table-stack">
+<div class="card shadow-sm table-responsive">
+  <table class="table table-hover align-middle mb-0 table-stack users-table">
     <thead>
       <tr>
-        <th>{{ _("Username") }}</th>
-        <th>{{ _("Full name") }}</th>
-        <th>{{ _("Email") }}</th>
+        <th>{{ _("User") }}</th>
         <th>{{ _("Role") }}</th>
         <th>{{ _("Department") }}</th>
         <th>{{ _("Status") }}</th>
-        <th></th>
+        <th>{{ _("Joined") }}</th>
+        <th><span class="visually-hidden">{{ _("Actions") }}</span></th>
       </tr>
     </thead>
     <tbody>
       {% for user in users %}
       <tr>
-        <td data-label="{{ _("Username") }}">{{ user.username }}</td>
-        <td data-label="{{ _("Full name") }}">{{ user.full_name or "—" }}</td>
-        <td data-label="{{ _("Email") }}">{{ user.email or "—" }}</td>
+        <td data-label="{{ _("User") }}">
+          <span class="person"
+            >{{ avatar(user) }}<span class="person-names"
+              ><span class="fw-semibold">{{ user.full_name or user.username }}</span
+              ><span class="text-muted small"
+                >{{ user.username }}{% if user.email %} <span class="visually-hidden">,</span>
+                {{ user.email }}{% endif %}</span
+              ></span
+            ></span
+          >
+        </td>
         <td data-label="{{ _("Role") }}">{{ role_label(user.role) }}</td>
         <td data-label="{{ _("Department") }}">{{ user.department.name if user.department else "—" }}</td>
         <td data-label="{{ _("Status") }}">
@@ -49,6 +89,7 @@
             >{{ labels.get(user.status, user.status) }}</span
           >
         </td>
+        <td data-label="{{ _("Joined") }}" class="text-nowrap">{{ when(user.created_at) }}</td>
         <td class="text-end text-nowrap">
           <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.user_edit', user_id=user.id) }}"
             ><i class="ph ph-pencil-simple" aria-hidden="true"></i>{{ _("Edit") }}</a

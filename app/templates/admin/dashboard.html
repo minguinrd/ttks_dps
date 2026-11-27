@@ -1,15 +1,15 @@
-{% extends "base.html" %} {% from "macros/badges.html" import priority_label %} {% block title %}{{ _("Admin") }}{% endblock %} {% block content %}
+{% extends "base.html" %} {% from "macros/badges.html" import priority_label, role_label, avatar, when %} {% from "macros/tickets.html" import ticket_list %} {% block title %}{{ _("Admin") }}{% endblock %} {% block content %}
 <div class="page-head">
-  <h1>{{ _("Admin Dashboard") }}</h1>
+  <div>
+    <h1>{{ _("Admin Dashboard") }}</h1>
+    <p>{{ _("What needs a decision, who is carrying the work and how the system is doing.") }}</p>
+  </div>
   <div class="d-flex flex-wrap gap-2">
-    <a class="btn btn-outline-secondary" href="{{ url_for('admin.users') }}"
-      ><i class="ph ph-users" aria-hidden="true"></i>{{ _("Manage users") }}</a
+    <a class="btn btn-outline-secondary" href="{{ url_for('reports.index') }}"
+      ><i class="ph ph-chart-bar" aria-hidden="true"></i>{{ _("Reports") }}</a
     >
-    <a class="btn btn-outline-secondary" href="{{ url_for('admin.departments') }}"
-      ><i class="ph ph-buildings" aria-hidden="true"></i>{{ _("Manage departments") }}</a
-    >
-    <a class="btn btn-outline-secondary" href="{{ url_for('admin.categories') }}"
-      ><i class="ph ph-tag" aria-hidden="true"></i>{{ _("Manage categories") }}</a
+    <a class="btn btn-primary" href="{{ url_for('admin.user_new') }}"
+      ><i class="ph ph-user-plus" aria-hidden="true"></i>{{ _("New user") }}</a
     >
   </div>
 </div>
@@ -27,18 +27,139 @@
     <span class="value">{{ stats.resolved_this_week }}</span>
     <span class="label">{{ _("Resolved this week") }}</span>
   </div>
-  <div class="figure{% if stats.pending_users %} is-alert{% endif %}">
+  <a
+    class="figure text-reset text-decoration-none{% if stats.pending_users %} is-alert{% endif %}"
+    href="{{ url_for('admin.users', status='pending') }}"
+  >
     <span class="value">{{ stats.pending_users }}</span>
     <span class="label">{{ _("Pending users") }}</span>
-    {% if stats.pending_users %}
-    <a class="d-block small fw-bold" href="{{ url_for('admin.users', status='pending') }}">{{ _("Review") }}</a>
-    {% endif %}
+  </a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-7">
+    <section class="panel h-100" aria-labelledby="dash-attention">
+      <h2 class="panel-title" id="dash-attention">{{ _("Needs attention") }}</h2>
+      {% set anything = stats.pending_users or details.oldest_open or details.urgent_pending
+      or details.stale_tickets or details.backup_stale %}
+      {% if anything %}
+      <ul class="attention">
+        {% if stats.pending_users %}
+        <li class="is-warn">
+          <i class="ph ph-user-circle-plus" aria-hidden="true"></i>
+          <div>
+            <p class="attention-title">{{ _("{n} registrations awaiting approval", n=stats.pending_users) }}</p>
+            <ul class="attention-list">
+              {% for user in details.pending_user_list %}
+              <li>
+                <span>{{ user.full_name or user.username }}</span>
+                <span class="text-muted">{{ user.email or user.username }}</span>
+                {{ when(user.created_at) }}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.users', status='pending') }}">{{ _("Review") }}</a>
+        </li>
+        {% endif %}
+        {% if details.oldest_open %}
+        <li class="{{ 'is-warn' if details.oldest_open_age.days >= 1 else '' }}">
+          <i class="ph ph-hourglass-medium" aria-hidden="true"></i>
+          <div>
+            <p class="attention-title">{{ _("Oldest unassigned ticket") }}: {{ duration(details.oldest_open_age) }}</p>
+            <p class="attention-sub">
+              #{{ details.oldest_open.id }} {{ details.oldest_open.subject }}
+              <span class="text-muted">({{ details.oldest_open.created_at.strftime("%Y-%m-%d %H:%M") }})</span>
+            </p>
+          </div>
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('tickets.detail', ticket_id=details.oldest_open.id) }}">{{ _("View") }}</a>
+        </li>
+        {% endif %}
+        {% if details.urgent_pending %}
+        <li class="is-danger">
+          <i class="ph ph-warning" aria-hidden="true"></i>
+          <div>
+            <p class="attention-title">{{ _("{n} urgent tickets still pending", n=details.urgent_pending) }}</p>
+          </div>
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('tickets.queue', priority='urgent') }}">{{ _("View") }}</a>
+        </li>
+        {% endif %}
+        {% if details.stale_tickets %}
+        <li class="is-danger">
+          <i class="ph ph-user-minus" aria-hidden="true"></i>
+          <div>
+            <p class="attention-title">{{ _("Tickets with a stale assignee") }}: {{ stats.stale_assignee }}</p>
+            <p class="attention-sub">{{ _("Their assignee can no longer sign in. Reassign or release them.") }}</p>
+            <ul class="attention-list">
+              {% for ticket in details.stale_tickets %}
+              <li>
+                <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}">#{{ ticket.id }} {{ ticket.subject }}</a>
+                <span class="text-muted">{{ ticket.assignee.full_name or ticket.assignee.username }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+            {% if stats.stale_assignee > details.stale_tickets | length %}
+            <p class="attention-sub">{{ _("and {n} more", n=stats.stale_assignee - details.stale_tickets | length) }}</p>
+            {% endif %}
+          </div>
+        </li>
+        {% endif %}
+        {% if details.backup_stale %}
+        <li class="is-danger">
+          <i class="ph ph-database" aria-hidden="true"></i>
+          <div>
+            <p class="attention-title">
+              {% if details.last_backup %}{{ _("No backup in the last day") }}{% else %}{{ _("No backups yet") }}{% endif %}
+            </p>
+            <p class="attention-sub">{{ _("Backups run daily at {hour}. Check the server logs or take one now.", hour=details.backup_hour) }}</p>
+          </div>
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.backup_page') }}">{{ _("Backups") }}</a>
+        </li>
+        {% endif %}
+      </ul>
+      {% else %}
+      <p class="all-clear"><i class="ph ph-check-circle" aria-hidden="true"></i>{{ _("Nothing needs attention right now.") }}</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <div class="col-lg-5">
+    <section class="panel h-100" aria-labelledby="dash-team">
+      <h2 class="panel-title" id="dash-team">{{ _("Team workload") }}</h2>
+      {% if details.workload %}
+      <table class="table workload mb-0">
+        <thead>
+          <tr>
+            <th scope="col">{{ _("Agent") }}</th>
+            <th scope="col" class="text-end">{{ _("In progress") }}</th>
+            <th scope="col" class="text-end">{{ _("Resolved (7 days)") }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in details.workload %}
+          <tr>
+            <th scope="row">
+              <span class="person">{{ avatar(row.user, "avatar-sm") }}<span>{{ row.user.full_name or row.user.username }}</span></span>
+            </th>
+            <td class="num">
+              {{ row.in_progress }}
+              <span class="load" aria-hidden="true"><span style="--w: {{ (row.in_progress / details.workload_max * 100) | round(1) }}%"></span></span>
+            </td>
+            <td class="num">{{ row.resolved_week }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="text-muted mb-0">{{ _("There are no active agents yet.") }}</p>
+      {% endif %}
+    </section>
   </div>
 </div>
 
-<div class="row g-3">
+<div class="row g-3 mb-3">
   {% set cat_max = [stats.by_category.values() | max if stats.by_category else 0, 1] | max %}
-  <div class="col-md-4">
+  <div class="col-md-6 col-xl-4">
     <section class="panel h-100">
       <h2 class="panel-title">{{ _("By category") }}</h2>
       <ul class="dist">
@@ -53,7 +174,7 @@
   </div>
   {% set pr_max = [stats.by_priority.values() | max, 1] | max %}
   {% set pr_colors = {"urgent": "var(--pr-urgent)", "high": "var(--pr-high)", "normal": "var(--pr-normal)", "low": "var(--pr-low)"} %}
-  <div class="col-md-4">
+  <div class="col-md-6 col-xl-4">
     <section class="panel h-100">
       <h2 class="panel-title">{{ _("By priority") }}</h2>
       <ul class="dist">
@@ -69,16 +190,46 @@
       </ul>
     </section>
   </div>
-  <div class="col-md-4">
-    <section class="panel h-100">
-      <h2 class="panel-title">{{ _("Needs attention") }}</h2>
+  <div class="col-xl-4">
+    <section class="panel h-100" aria-labelledby="dash-system">
+      <h2 class="panel-title" id="dash-system">{{ _("System") }}</h2>
       <dl class="facts">
-        <dt>{{ _("Oldest unassigned ticket") }}</dt>
-        <dd>{{ stats.oldest_unassigned.strftime("%Y-%m-%d %H:%M") if stats.oldest_unassigned else "—" }}</dd>
-        <dt>{{ _("Tickets with a stale assignee") }}</dt>
-        <dd class="num">{{ stats.stale_assignee }}</dd>
+        <dt>{{ _("Active users") }}</dt>
+        <dd>
+          <a href="{{ url_for('admin.users', status='active') }}">{{ details.users_by_role.values() | sum }}</a>
+          <span class="text-muted">
+            ({% for role, count in details.users_by_role.items() %}{{ count }} {{ role_label(role) }}{{ ", " if not loop.last }}{% endfor %})
+          </span>
+        </dd>
+        <dt>{{ _("Suspended") }}</dt>
+        <dd><a href="{{ url_for('admin.users', status='suspended') }}">{{ details.suspended_users }}</a></dd>
+        <dt>{{ _("Departments") }}</dt>
+        <dd><a href="{{ url_for('admin.departments') }}">{{ details.departments_count }}</a></dd>
+        <dt>{{ _("Categories") }}</dt>
+        <dd><a href="{{ url_for('admin.categories') }}">{{ details.categories_count }}</a></dd>
+        <dt>{{ _("Last backup") }}</dt>
+        <dd>
+          {% if details.last_backup %}
+          <a href="{{ url_for('admin.backup_page') }}" class="{{ 'text-danger fw-bold' if details.backup_stale else '' }}"
+            >{{ _("{age} ago", age=duration(details.last_backup.age)) }}</a
+          >
+          <span class="text-muted">({{ details.backup_count }})</span>
+          {% else %}
+          <a href="{{ url_for('admin.backup_page') }}" class="text-danger fw-bold">{{ _("Never") }}</a>
+          {% endif %}
+        </dd>
+        <dt>{{ _("Google sign-in") }}</dt>
+        <dd>{{ _("On") if details.google_enabled else _("Off") }}</dd>
       </dl>
     </section>
   </div>
 </div>
+
+{% if details.recent %}
+<div class="d-flex justify-content-between align-items-baseline mb-2">
+  <h2 class="report-section-title m-0">{{ _("Latest tickets") }}</h2>
+  <a href="{{ url_for('tickets.queue') }}">{{ _("Open the queue") }}</a>
+</div>
+{{ ticket_list(details.recent, details.now) }}
+{% endif %}
 {% endblock %}

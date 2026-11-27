@@ -555,8 +555,8 @@ def test_compute_dashboard_stats(app, user_factory, ticket_factory):
         assignee=agent,
         resolved_at=now - timedelta(days=8),
     )
-    # "Unassigned" means no assignee regardless of ticket status, so this closed
-    # ticket is the oldest unassigned one.
+    # A closed ticket without an assignee needs nobody: it must not count as
+    # the oldest unassigned one (the 3-day-old open ticket is).
     ticket_factory(
         requester,
         category="Network",
@@ -581,7 +581,7 @@ def test_compute_dashboard_stats(app, user_factory, ticket_factory):
             "Other": 2,
         },
         "by_priority": {"low": 2, "normal": 3, "high": 1, "urgent": 1},
-        "oldest_unassigned": now - timedelta(days=10),
+        "oldest_unassigned": now - timedelta(days=3),
         "stale_assignee": 1,
     }
 

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
+from sqlalchemy.orm import selectinload
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
@@ -23,6 +24,7 @@ from app.i18n import _
 from app.main.routes import branding_upload_error_response
 from app.models import Category, Department, Priority, Role, Setting, Ticket, TicketStatus, User
 from app.permissions import role_required
+from app.reports.stats import format_duration
 
 
 def compute_dashboard_stats() -> dict:
@@ -31,12 +33,12 @@ def compute_dashboard_stats() -> dict:
     Keys: ``open``/``assigned`` count tickets by status; ``resolved_this_week``
     counts tickets resolved in the last 7 days; ``pending_users`` counts awaiting
     registrations; ``by_category``/``by_priority`` are zero-filled breakdowns over
-    all tickets; ``oldest_unassigned`` is the ``created_at`` of the oldest ticket
-    with no assignee (or ``None``); ``stale_assignee`` counts tickets whose
-    assignee is not an active user.
+    all tickets; ``oldest_unassigned`` is the ``created_at`` of the oldest open
+    ticket with no assignee (or ``None``); ``stale_assignee`` counts in-progress
+    tickets whose assignee is not an active user.
     """
     # SQLite stores naive UTC datetimes; keep cutoffs in the same shape.
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = _naive_utc_now()
     week_ago = now - timedelta(days=7)
 
     def breakdown(column, values):
@@ -65,14 +67,145 @@ def compute_dashboard_stats() -> dict:
         ),
         "by_category": {category.name: category_counts[category.id] for category in categories},
         "by_priority": breakdown(Ticket.priority, [item.value for item in Priority]),
+        # Only tickets still waiting in the queue need someone to pick them up.
         "oldest_unassigned": db.session.scalar(
-            db.select(db.func.min(Ticket.created_at)).where(Ticket.assignee_id.is_(None))
+            db.select(db.func.min(Ticket.created_at)).where(
+                Ticket.status == TicketStatus.open, Ticket.assignee_id.is_(None)
+            )
         ),
-        "stale_assignee": db.session.scalar(
-            db.select(db.func.count(Ticket.id))
-            .join(User, Ticket.assignee_id == User.id)
-            .where(User.status != "active")
+        "stale_assignee": db.session.scalar(_stale_query(db.func.count(Ticket.id))),
+    }
+
+
+def _naive_utc_now() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None, microsecond=0)
+
+
+def _stale_query(*columns):
+    """In-progress tickets held by an assignee who can no longer log in."""
+    return (
+        db.select(*columns)
+        .join(User, Ticket.assignee_id == User.id)
+        .where(Ticket.status == TicketStatus.assigned, User.status != "active")
+    )
+
+
+def _backup_files() -> list[Path]:
+    """Backup files in BACKUP_DIR, newest first (names sort chronologically)."""
+    backup_dir = Path(current_app.config["BACKUP_DIR"])
+    return sorted(backup_dir.glob("ttks_dps-*.db"), reverse=True)
+
+
+# A daily schedule plus a couple of hours' slack before the dashboard warns.
+BACKUP_STALE_AFTER = timedelta(hours=26)
+
+
+def compute_dashboard_details() -> dict:
+    """The lists behind the dashboard figures: what to act on and who is busy."""
+    now = _naive_utc_now()
+    week_ago = now - timedelta(days=7)
+
+    oldest_open = db.session.scalar(
+        Ticket.list_query()
+        .where(Ticket.status == TicketStatus.open, Ticket.assignee_id.is_(None))
+        .order_by(Ticket.created_at)
+        .limit(1)
+    )
+    pending_users = db.session.scalars(
+        db.select(User).where(User.status == "pending").order_by(User.created_at).limit(5)
+    ).all()
+    stale_tickets = db.session.scalars(
+        _stale_query(Ticket)
+        .options(selectinload(Ticket.assignee))
+        .order_by(Ticket.created_at)
+        .limit(5)
+    ).all()
+    urgent_pending = db.session.scalar(
+        db.select(db.func.count(Ticket.id)).where(
+            Ticket.priority == Priority.urgent,
+            Ticket.status.in_((TicketStatus.open, TicketStatus.assigned)),
+        )
+    )
+
+    # Workload: every active agent/admin, even with nothing on their plate.
+    in_progress = dict(
+        db.session.execute(
+            db.select(Ticket.assignee_id, db.func.count(Ticket.id))
+            .where(Ticket.status == TicketStatus.assigned)
+            .group_by(Ticket.assignee_id)
+        ).all()
+    )
+    resolved_week = dict(
+        db.session.execute(
+            db.select(Ticket.assignee_id, db.func.count(Ticket.id))
+            .where(Ticket.resolved_at >= week_ago)
+            .group_by(Ticket.assignee_id)
+        ).all()
+    )
+    staff = db.session.scalars(
+        db.select(User).where(User.role.in_((Role.agent, Role.admin)), User.status == "active")
+    ).all()
+    workload = sorted(
+        (
+            {
+                "user": member,
+                "in_progress": in_progress.get(member.id, 0),
+                "resolved_week": resolved_week.get(member.id, 0),
+            }
+            for member in staff
         ),
+        key=lambda row: (-row["in_progress"], -row["resolved_week"], row["user"].username),
+    )
+
+    users_by_role = dict.fromkeys((Role.user.value, Role.agent.value, Role.admin.value), 0)
+    for role, count in db.session.execute(
+        db.select(User.role, db.func.count(User.id))
+        .where(User.status == "active")
+        .group_by(User.role)
+    ):
+        users_by_role[role] = count
+    suspended_users = db.session.scalar(
+        db.select(db.func.count(User.id)).where(User.status == "suspended")
+    )
+
+    backups = _backup_files()
+    last_backup = None
+    if backups:
+        stat = backups[0].stat()
+        taken = datetime.fromtimestamp(stat.st_mtime, UTC).replace(tzinfo=None)
+        last_backup = {
+            "name": backups[0].name,
+            "taken": taken,
+            "age": now - taken,
+            "size": stat.st_size,
+        }
+
+    recent = db.session.scalars(
+        Ticket.list_query().order_by(Ticket.created_at.desc()).limit(6)
+    ).all()
+
+    return {
+        "now": now,
+        "oldest_open": oldest_open,
+        "oldest_open_age": (now - oldest_open.created_at) if oldest_open else None,
+        "pending_user_list": pending_users,
+        "stale_tickets": stale_tickets,
+        "urgent_pending": urgent_pending,
+        "workload": workload,
+        "workload_max": max([1, *(row["in_progress"] for row in workload)]),
+        "users_by_role": users_by_role,
+        "suspended_users": suspended_users,
+        "last_backup": last_backup,
+        "backup_stale": last_backup is None or last_backup["age"] > BACKUP_STALE_AFTER,
+        "backup_count": len(backups),
+        "backup_hour": current_app.config["BACKUP_HOUR"],
+        "categories_count": db.session.scalar(db.select(db.func.count(Category.id))),
+        "departments_count": db.session.scalar(db.select(db.func.count(Department.id))),
+        "google_enabled": bool(
+            current_app.config.get("GOOGLE_CLIENT_ID")
+            and current_app.config.get("GOOGLE_CLIENT_SECRET")
+        ),
+        "recent": recent,
     }
 
 
@@ -80,21 +213,66 @@ def compute_dashboard_stats() -> dict:
 @login_required
 @role_required("admin")
 def dashboard():
-    return render_template("admin/dashboard.html", stats=compute_dashboard_stats())
+    return render_template(
+        "admin/dashboard.html",
+        stats=compute_dashboard_stats(),
+        details=compute_dashboard_details(),
+        duration=format_duration,
+    )
 
 
 @admin_bp.route("/users")
 @login_required
 @role_required("admin")
 def users():
-    # Tabs narrow the list via ?status=; anything else shows everyone.
+    # Tabs narrow the list via ?status=; anything else shows everyone. The
+    # search box (?q=) and role filter combine with the tab, and the tab
+    # counts honour them.
     status = request.args.get("status", "all")
     if status not in ("pending", "active", "suspended", "all"):
         status = "all"
-    query = db.select(User).order_by(User.username)
+    role = request.args.get("role", "")
+    if role not in {item.value for item in Role}:
+        role = ""
+    search = request.args.get("q", "").strip()[:100]
+
+    filters = []
+    if role:
+        filters.append(User.role == role)
+    if search:
+        # LIKE wildcards in the search text match literally.
+        escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pattern = "%" + escaped + "%"
+        filters.append(
+            db.or_(
+                User.username.ilike(pattern, escape="\\"),
+                User.full_name.ilike(pattern, escape="\\"),
+                User.email.ilike(pattern, escape="\\"),
+            )
+        )
+    counts = dict.fromkeys(("pending", "active", "suspended"), 0)
+    for value, count in db.session.execute(
+        db.select(User.status, db.func.count(User.id)).where(*filters).group_by(User.status)
+    ):
+        counts[value] = count
+    counts["all"] = sum(counts.values())
+
+    query = (
+        db.select(User)
+        .options(selectinload(User.department))
+        .where(*filters)
+        .order_by(User.username)
+    )
     if status != "all":
         query = query.where(User.status == status)
-    return render_template("admin/users.html", users=db.session.scalars(query).all(), status=status)
+    return render_template(
+        "admin/users.html",
+        users=db.session.scalars(query).all(),
+        status=status,
+        role=role,
+        search=search,
+        counts=counts,
+    )
 
 
 @admin_bp.route("/users/new", methods=["GET", "POST"])
@@ -360,8 +538,7 @@ def branding_logo_delete():
 @login_required
 @role_required("admin")
 def backup_page():
-    backup_dir = Path(current_app.config["BACKUP_DIR"])
-    files = sorted(backup_dir.glob("ttks_dps-*.db"), reverse=True)
+    files = _backup_files()
     return render_template(
         "admin/backup.html",
         backups=[
