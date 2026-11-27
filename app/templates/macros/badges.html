@@ -12,12 +12,42 @@
 {%- endmacro %} {% macro role_label(value) %}
 {%- set labels = {"user": _("user"), "agent": _("agent"), "admin": _("admin")} -%}
 {{- labels.get(value, value) -}}
-{%- endmacro %} {% macro status_badge(status) %}
-{%- set colors = {"open": "secondary", "assigned": "primary", "resolved": "success", "closed": "dark"} -%}
-<span class="badge text-bg-{{ colors.get(status, 'secondary') }}">{{ status_label(status) }}</span>
-{%- endmacro %} {% macro category_badge(category) %}
-<span class="badge text-bg-info">{{ category }}</span>
-{%- endmacro %} {% macro priority_badge(priority) %}
-{%- set colors = {"low": "light", "normal": "secondary", "high": "warning", "urgent": "danger"} -%}
-<span class="badge text-bg-{{ colors.get(priority, 'secondary') }}">{{ priority_label(priority) }}</span>
+{%- endmacro %}
+
+{# Status: coloured dot + word (main.css .status-*); colour never stands alone. #}
+{% macro status_badge(status) -%}
+<span class="status status-{{ status }}">{{ status_label(status) }}</span>
+{%- endmacro %}
+
+{# Category names are admin data: plain text, no chip. #}
+{% macro category_badge(category) -%}
+<span class="category">{{ category }}</span>
+{%- endmacro %}
+
+{# Priority: four signal bars (n filled) + word; the bars are decorative. #}
+{% macro priority_badge(priority) -%}
+<span class="priority priority-{{ priority }}"
+  ><span class="signal" aria-hidden="true"><i></i><i></i><i></i><i></i></span
+  >{{ priority_label(priority) }}</span
+>
+{%- endmacro %}
+
+{# Initial-letter avatar, or the uploaded picture when there is one. #}
+{% macro avatar(user, size="") -%}
+{%- if user.avatar_path -%}
+<img class="avatar {{ size }}" src="/avatars/{{ user.id }}" alt="" />
+{%- else -%}
+<span class="avatar {{ size }}" aria-hidden="true">{{ (user.full_name or user.username)[:1] | upper }}</span>
+{%- endif -%}
+{%- endmacro %}
+
+{# Absolute UTC timestamp, upgraded to "3 hours ago" in the reader's
+   language by app.js (Intl.RelativeTimeFormat); the absolute value stays
+   in the tooltip and in print. #}
+{% macro when(value) -%}
+{%- if value -%}
+<time datetime="{{ value.strftime('%Y-%m-%dT%H:%M:%SZ') }}" data-relative
+  >{{ value.strftime("%Y-%m-%d %H:%M") }}</time
+>
+{%- endif -%}
 {%- endmacro %}

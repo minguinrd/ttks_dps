@@ -5,135 +5,256 @@
 
    Brand colour: base.html injects --brand-accent (admin setting, #RRGGBB)
    and --brand-accent-rgb ("r, g, b") on :root. Every accent-aware rule
-   carries a fallback to Bootstrap's default blue so the page still renders
-   coherently if the variable is missing.
+   carries a fallback to Bootstrap's default blue.
 
-   Direction: minimal / Swiss — slate neutrals on a light theme, generous
-   white space, geometric sans (Outfit display + Work Sans body), soft
-   elevation, 180ms transitions, and responsive tables that stack into
-   labelled rows on phones.
+   Direction: a working tool for an internal helpdesk. One typeface chosen
+   for legibility (Atkinson Hyperlegible Next), quiet neutral surfaces, and
+   one loud device — the status rail + priority signal bars on ticket rows —
+   so agents can triage a list at a glance. Light and dark follow the OS
+   (base.html sets data-bs-theme before first paint).
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   1. Design tokens
+   1. Tokens
    -------------------------------------------------------------------------- */
 :root {
-  /* Typography */
-  --ui-font-sans: "Work Sans", system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  --ui-font-display: "Outfit", var(--ui-font-sans);
+  --ui-font: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
 
-  /* Slate neutrals (light theme) */
-  --ui-bg: #f6f8fb;
+  --accent: var(--brand-accent, #0d6efd);
+  --accent-rgb: var(--brand-accent-rgb, 13, 110, 253);
+
+  /* Light theme */
+  --ui-bg: color-mix(in srgb, var(--accent) 2%, #f5f6f8);
   --ui-surface: #ffffff;
-  --ui-text: #0f172a;
-  --ui-text-muted: #64748b;
-  --ui-border: #e5e9f0;
-  --ui-border-soft: #eef1f6;
+  --ui-surface-sunken: #f7f8fa;
+  --ui-text: #17202b;
+  --ui-text-muted: #5b6675;
+  --ui-line: #dfe3e8;
+  --ui-line-soft: #ebeef2;
+  --ui-accent-ink: color-mix(in srgb, var(--accent) 78%, #000);
+  --ui-accent-wash: color-mix(in srgb, var(--accent) 10%, var(--ui-surface));
 
-  /* Elevation + motion */
-  --ui-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
-    0 6px 20px -14px rgba(15, 23, 42, 0.3);
-  --ui-shadow-pop: 0 16px 40px -24px rgba(15, 23, 42, 0.35);
-  --ui-transition: 180ms ease;
+  /* Status (what the ticket is waiting on) */
+  --st-open: #b25e09;
+  --st-assigned: var(--accent);
+  --st-resolved: #1f7a4d;
+  --st-closed: #8a939f;
 
-  /* Bootstrap variable overrides — token-level restyling */
-  --bs-body-font-family: var(--ui-font-sans);
-  --bs-font-sans-serif: var(--ui-font-sans);
-  --bs-body-line-height: 1.6;
+  /* Priority signal */
+  --pr-urgent: #c62828;
+  --pr-high: #c2570c;
+  --pr-normal: #5b6675;
+  --pr-low: #8a939f;
+  --pr-off: #d5dae0;
+
+  --ui-radius: 0.5rem;
+  --ui-radius-lg: 0.75rem;
+  --ui-shadow: 0 1px 2px rgba(23, 32, 43, 0.06);
+  --ui-shadow-pop: 0 12px 32px -12px rgba(23, 32, 43, 0.28);
+  --ui-transition: 160ms ease;
+
+  /* Bootstrap variable overrides */
+  --bs-body-font-family: var(--ui-font);
+  --bs-font-sans-serif: var(--ui-font);
+  --bs-body-font-size: 1rem;
+  --bs-body-line-height: 1.55;
   --bs-body-color: var(--ui-text);
   --bs-body-bg: var(--ui-bg);
   --bs-secondary-color: var(--ui-text-muted);
   --bs-emphasis-color: var(--ui-text);
-  --bs-border-color: var(--ui-border);
-  --bs-border-color-translucent: var(--ui-border);
-  --bs-tertiary-bg: var(--ui-border-soft);
-
-  /* One global radius keeps every stock component on the same grid */
-  --bs-border-radius: 0.625rem;
-  --bs-border-radius-sm: 0.45rem;
-  --bs-border-radius-lg: 0.85rem;
-  --bs-border-radius-pill: 50rem;
-
-  /* The app uses .shadow-sm on nearly every card — give it real elevation */
+  --bs-border-color: var(--ui-line);
+  --bs-border-color-translucent: var(--ui-line);
+  --bs-tertiary-bg: var(--ui-surface-sunken);
+  --bs-secondary-bg: var(--ui-surface-sunken);
+  --bs-border-radius: var(--ui-radius);
+  --bs-border-radius-sm: 0.375rem;
+  --bs-border-radius-lg: var(--ui-radius-lg);
   --bs-box-shadow-sm: var(--ui-shadow);
   --bs-box-shadow: var(--ui-shadow-pop);
 
-  /* Brand accent → Bootstrap's primary palette and links */
-  --bs-primary: var(--brand-accent, #0d6efd);
-  --bs-primary-rgb: var(--brand-accent-rgb, 13, 110, 253);
-  --bs-primary-bg-subtle: color-mix(in srgb, var(--brand-accent, #0d6efd) 14%, #fff);
-  --bs-primary-text-emphasis: color-mix(in srgb, var(--brand-accent, #0d6efd) 72%, #000);
-  --bs-primary-border-subtle: color-mix(in srgb, var(--brand-accent, #0d6efd) 32%, #fff);
-  --bs-link-color-rgb: var(--brand-accent-rgb, 13, 110, 253);
+  --bs-primary: var(--accent);
+  --bs-primary-rgb: var(--accent-rgb);
+  --bs-primary-bg-subtle: var(--ui-accent-wash);
+  --bs-primary-text-emphasis: var(--ui-accent-ink);
+  --bs-primary-border-subtle: color-mix(in srgb, var(--accent) 32%, var(--ui-surface));
+  --bs-link-color: var(--ui-accent-ink);
+  --bs-link-color-rgb: var(--accent-rgb);
+  --bs-link-hover-color: var(--ui-text);
 
-  /* Cards: white surfaces, quiet header band */
   --bs-card-bg: var(--ui-surface);
-  --bs-card-border-color: var(--ui-border);
-  --bs-card-cap-bg: #f8fafc;
-  --bs-card-cap-color: #334155;
-  --bs-card-cap-padding-y: 0.85rem;
-  --bs-card-cap-padding-x: 1.25rem;
+  --bs-card-border-color: var(--ui-line);
+  --bs-card-cap-bg: var(--ui-surface);
   --bs-card-spacer-y: 1.25rem;
   --bs-card-spacer-x: 1.25rem;
 
-  /* Floating menus sit on white, not the page tint */
   --bs-dropdown-bg: var(--ui-surface);
-  --bs-dropdown-border-color: var(--ui-border);
+  --bs-dropdown-border-color: var(--ui-line);
   --bs-dropdown-box-shadow: var(--ui-shadow-pop);
-
+  --bs-dropdown-link-color: var(--ui-text);
   --bs-list-group-bg: var(--ui-surface);
-  --bs-list-group-border-color: var(--ui-border-soft);
+  --bs-list-group-border-color: var(--ui-line-soft);
+}
+
+:root[data-bs-theme="dark"] {
+  --ui-bg: color-mix(in srgb, var(--accent) 4%, #12161c);
+  --ui-surface: #1a1f27;
+  --ui-surface-sunken: #151a21;
+  --ui-text: #e6e9ee;
+  --ui-text-muted: #9aa4b2;
+  --ui-line: #2c333e;
+  --ui-line-soft: #252b35;
+  --ui-accent-ink: color-mix(in srgb, var(--accent) 55%, #fff);
+  --ui-accent-wash: color-mix(in srgb, var(--accent) 18%, var(--ui-surface));
+
+  --st-open: #e39a4a;
+  --st-assigned: color-mix(in srgb, var(--accent) 70%, #fff);
+  --st-resolved: #4cbf86;
+  --st-closed: #7a8491;
+  --pr-urgent: #f0706a;
+  --pr-high: #ee9a52;
+  --pr-normal: #aab3bf;
+  --pr-low: #7a8491;
+  --pr-off: #39414d;
+
+  --ui-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ui-shadow-pop: 0 16px 40px -12px rgba(0, 0, 0, 0.7);
+}
+
+/* Same-origin page changes cross-fade instead of flashing white. */
+@view-transition {
+  navigation: auto;
 }
 
 /* --------------------------------------------------------------------------
-   2. Base + typography
+   2. Base + type scale (1.25 ratio: 14 / 16 / 20 / 25 / 31)
    -------------------------------------------------------------------------- */
+body {
+  font-feature-settings: "tnum" 0;
+  -webkit-font-smoothing: antialiased;
+}
+
 ::selection {
-  background: color-mix(in srgb, var(--brand-accent, #0d6efd) 24%, #fff);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 h1,
-h2,
-h3,
-h4,
-h5,
-h6,
 .h1,
+h2,
 .h2,
+h3,
 .h3,
+h4,
 .h4,
+h5,
 .h5,
+h6,
 .h6 {
-  font-family: var(--ui-font-display);
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  font-family: var(--ui-font);
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--ui-text);
+  line-height: 1.2;
 }
 
+.h4,
 main h1 {
+  font-size: 1.5625rem;
   overflow-wrap: break-word;
 }
 
-a:focus-visible {
-  outline: 2px solid rgba(var(--brand-accent-rgb, 13, 110, 253), 0.55);
+.h5,
+main h2 {
+  font-size: 1.25rem;
+}
+
+.h6 {
+  font-size: 1rem;
+}
+
+.small,
+small {
+  font-size: 0.875rem;
+}
+
+.text-muted {
+  color: var(--ui-text-muted) !important;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  text-underline-offset: 0.18em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible {
+  outline: none; /* these draw their own focus ring below */
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -3rem;
+  z-index: 2000;
+  padding: 0.5rem 1rem;
+  border-radius: var(--ui-radius);
+  background: var(--ui-text);
+  color: var(--ui-surface);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 0.75rem;
+}
+
+/* Page header: title + primary action, used by every list page. */
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.page-head h1 {
+  margin: 0;
+}
+
+.page-head p {
+  margin: 0.25rem 0 0;
+  color: var(--ui-text-muted);
+}
+
 /* --------------------------------------------------------------------------
-   3. Navbar
+   3. Top bar — white surface so uploaded logos sit on the background they
+   were drawn for; the brand colour is a top rule and the active marker.
    -------------------------------------------------------------------------- */
 .navbar {
-  background-color: var(--brand-accent, #0d6efd);
-  padding-top: 0.6rem;
-  padding-bottom: 0.6rem;
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08), 0 12px 30px -24px rgba(15, 23, 42, 0.7);
+  background: var(--ui-surface);
+  border-top: 3px solid var(--accent);
+  border-bottom: 1px solid var(--ui-line);
+  padding-block: 0.4rem;
+  --bs-navbar-color: var(--ui-text-muted);
+  --bs-navbar-hover-color: var(--ui-text);
+  --bs-navbar-active-color: var(--ui-text);
+  --bs-navbar-brand-color: var(--ui-text);
+  --bs-navbar-brand-hover-color: var(--ui-text);
 }
 
 .navbar-brand {
-  font-family: var(--ui-font-display);
-  font-size: 1.15rem;
-  font-weight: 600;
+  font-size: 1.125rem;
+  font-weight: 700;
   letter-spacing: -0.01em;
   display: inline-flex;
   align-items: center;
@@ -145,25 +266,37 @@ a:focus-visible {
 }
 
 .navbar-brand-img {
-  max-height: 30px;
+  max-height: 32px;
   width: auto;
 }
 
 .navbar .navbar-nav .nav-link {
-  color: rgba(255, 255, 255, 0.82);
-  font-weight: 500;
+  font-weight: 600;
+  padding: 0.5rem 0.75rem;
   border-radius: var(--bs-border-radius-sm);
-  padding: 0.5rem 0.8rem;
   transition: color var(--ui-transition), background-color var(--ui-transition);
 }
 
-.navbar .navbar-nav .nav-link:hover,
-.navbar .navbar-nav .nav-link:focus {
-  color: #fff;
-  background-color: rgba(255, 255, 255, 0.14);
+.navbar .navbar-nav .nav-link:hover {
+  background: var(--ui-surface-sunken);
 }
 
-/* Notification bell: relative wrapper so the unread badge can overhang. */
+/* Active section: accent underline drawn inside the link box. */
+.navbar .navbar-nav .nav-link.active {
+  color: var(--ui-text);
+  background: none;
+  box-shadow: inset 0 -2px 0 var(--nav-active-color, var(--accent));
+  border-radius: 0;
+}
+
+.navbar-toggler {
+  border-color: var(--ui-line);
+}
+
+:root[data-bs-theme="dark"] .navbar-toggler-icon {
+  filter: invert(1);
+}
+
 .nav-icon {
   position: relative;
   display: inline-flex;
@@ -171,14 +304,48 @@ a:focus-visible {
   justify-content: center;
 }
 
+.nav-icon .ph {
+  font-size: 1.35rem;
+}
+
 .nav-icon #unread-badge {
   position: absolute;
-  top: -5px;
-  right: -9px;
-  font-size: 0.65rem;
-  font-weight: 600;
-  padding: 0.25em 0.45em;
-  border: 1.5px solid var(--brand-accent, #0d6efd);
+  top: -6px;
+  right: -10px;
+  min-width: 1.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2em 0.4em;
+  border: 2px solid var(--ui-surface);
+  background: var(--pr-urgent) !important;
+  color: #fff !important;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--ui-accent-wash);
+  color: var(--ui-accent-ink);
+  font-size: 0.875rem;
+  font-weight: 700;
+  object-fit: cover;
+}
+
+.avatar-sm {
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 0.8rem;
+}
+
+.dropdown-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ui-text-muted);
 }
 
 @media (max-width: 991.98px) {
@@ -186,8 +353,9 @@ a:focus-visible {
     padding: 0.5rem 0 0.75rem;
   }
 
-  .navbar .navbar-nav .nav-link {
-    padding: 0.65rem 0.75rem;
+  .navbar .navbar-nav .nav-link.active {
+    box-shadow: inset 3px 0 0 var(--nav-active-color, var(--accent));
+    padding-left: 0.9rem;
   }
 }
 
@@ -195,119 +363,211 @@ a:focus-visible {
    4. Buttons
    -------------------------------------------------------------------------- */
 .btn {
-  font-weight: 500;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45em;
   transition: background-color var(--ui-transition), border-color var(--ui-transition),
     color var(--ui-transition), box-shadow var(--ui-transition);
 }
 
+.btn .ph {
+  font-size: 1.15em;
+  flex: none;
+}
+
 .btn-primary {
-  --bs-btn-bg: var(--brand-accent, #0d6efd);
-  --bs-btn-border-color: var(--brand-accent, #0d6efd);
-  --bs-btn-hover-bg: color-mix(in srgb, var(--brand-accent, #0d6efd) 84%, #000);
-  --bs-btn-hover-border-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 84%, #000);
-  --bs-btn-active-bg: color-mix(in srgb, var(--brand-accent, #0d6efd) 74%, #000);
-  --bs-btn-active-border-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 74%, #000);
-  --bs-btn-disabled-bg: var(--brand-accent, #0d6efd);
-  --bs-btn-disabled-border-color: var(--brand-accent, #0d6efd);
-  --bs-btn-focus-shadow-rgb: var(--brand-accent-rgb, 13, 110, 253);
+  --bs-btn-bg: var(--accent);
+  --bs-btn-border-color: var(--accent);
+  --bs-btn-hover-bg: color-mix(in srgb, var(--accent) 85%, #000);
+  --bs-btn-hover-border-color: color-mix(in srgb, var(--accent) 85%, #000);
+  --bs-btn-active-bg: color-mix(in srgb, var(--accent) 75%, #000);
+  --bs-btn-active-border-color: color-mix(in srgb, var(--accent) 75%, #000);
+  --bs-btn-disabled-bg: var(--accent);
+  --bs-btn-disabled-border-color: var(--accent);
+  --bs-btn-focus-shadow-rgb: var(--accent-rgb);
 }
 
 .btn-outline-primary {
-  --bs-btn-color: var(--brand-accent, #0d6efd);
-  --bs-btn-border-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 45%, #fff);
-  --bs-btn-hover-bg: var(--brand-accent, #0d6efd);
-  --bs-btn-hover-border-color: var(--brand-accent, #0d6efd);
-  --bs-btn-active-bg: color-mix(in srgb, var(--brand-accent, #0d6efd) 84%, #000);
-  --bs-btn-active-border-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 84%, #000);
-  --bs-btn-focus-shadow-rgb: var(--brand-accent-rgb, 13, 110, 253);
+  --bs-btn-color: var(--ui-accent-ink);
+  --bs-btn-border-color: color-mix(in srgb, var(--accent) 45%, var(--ui-surface));
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--accent);
+  --bs-btn-hover-border-color: var(--accent);
+  --bs-btn-active-bg: color-mix(in srgb, var(--accent) 85%, #000);
+  --bs-btn-active-border-color: color-mix(in srgb, var(--accent) 85%, #000);
+  --bs-btn-focus-shadow-rgb: var(--accent-rgb);
 }
 
-/* Touch devices get full-size hit areas (WCAG 2.5.5 target size). */
+/* Neutral secondary actions: quiet surface buttons, not grey slabs. */
+.btn-outline-secondary,
+.btn-secondary,
+.btn-light {
+  --bs-btn-color: var(--ui-text);
+  --bs-btn-bg: var(--ui-surface);
+  --bs-btn-border-color: var(--ui-line);
+  --bs-btn-hover-color: var(--ui-text);
+  --bs-btn-hover-bg: var(--ui-surface-sunken);
+  --bs-btn-hover-border-color: color-mix(in srgb, var(--ui-text) 25%, var(--ui-line));
+  --bs-btn-active-color: var(--ui-text);
+  --bs-btn-active-bg: var(--ui-line-soft);
+  --bs-btn-active-border-color: var(--ui-line);
+  --bs-btn-focus-shadow-rgb: var(--accent-rgb);
+}
+
+.btn-ghost {
+  --bs-btn-color: var(--ui-text-muted);
+  --bs-btn-hover-color: var(--ui-text);
+  --bs-btn-hover-bg: var(--ui-surface-sunken);
+  --bs-btn-active-bg: var(--ui-line-soft);
+  --bs-btn-padding-x: 0.6rem;
+}
+
+/* Submitting: app.js sets aria-busy on the clicked button. */
+.btn[aria-busy="true"] {
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.btn[aria-busy="true"] .ph {
+  animation: ui-spin 0.9s linear infinite;
+}
+
+@keyframes ui-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (pointer: coarse) {
-  .btn {
-    min-height: 44px;
-  }
-
-  .btn-sm {
-    min-height: 44px;
-    padding: 0.5rem 1rem;
-  }
-
+  .btn,
+  .btn-sm,
   .dropdown-item {
     min-height: 44px;
   }
-}
-
-/* Phosphor icons inside buttons: one consistent size, nudged onto the
-   baseline, with breathing room after a leading icon. */
-.btn .ph {
-  font-size: 1.15em;
-  vertical-align: -0.15em;
-}
-
-.btn > .ph:first-child {
-  margin-right: 0.4em;
 }
 
 /* --------------------------------------------------------------------------
    5. Forms
    -------------------------------------------------------------------------- */
 .form-label {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #334155;
-  margin-bottom: 0.4rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
 }
 
 .form-control,
 .form-select {
   background-color: var(--ui-surface);
-  border-color: var(--ui-border);
+  border-color: var(--ui-line);
+  color: var(--ui-text);
+}
+
+.form-control::placeholder {
+  color: color-mix(in srgb, var(--ui-text-muted) 80%, transparent);
 }
 
 .form-control:focus,
 .form-select:focus {
   background-color: var(--ui-surface);
-  border-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 45%, #fff);
-  box-shadow: 0 0 0 0.25rem rgba(var(--brand-accent-rgb, 13, 110, 253), 0.16);
+  color: var(--ui-text);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 0.2rem rgba(var(--accent-rgb), 0.2);
+}
+
+/* Text areas grow with their content where supported (rows= is the floor). */
+textarea.form-control {
+  field-sizing: content;
+  min-height: 4.5rem;
+  max-height: 24rem;
 }
 
 .form-check-input {
-  border-color: var(--ui-border);
+  border-color: color-mix(in srgb, var(--ui-text) 30%, var(--ui-line));
+  background-color: var(--ui-surface);
 }
 
-.form-check-input:checked,
-.form-check-input:focus {
-  background-color: var(--brand-accent, #0d6efd);
-  border-color: var(--brand-accent, #0d6efd);
+.form-check-input:checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
 }
 
 .form-check-input:focus {
-  box-shadow: 0 0 0 0.25rem rgba(var(--brand-accent-rgb, 13, 110, 253), 0.16);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 0.2rem rgba(var(--accent-rgb), 0.2);
 }
 
 .form-text {
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--ui-text-muted);
 }
 
+.invalid-feedback {
+  font-weight: 600;
+}
+
 /* --------------------------------------------------------------------------
-   6. Cards
+   6. Surfaces
    -------------------------------------------------------------------------- */
 .card {
-  border-color: var(--ui-border);
+  border-color: var(--ui-line);
   box-shadow: var(--ui-shadow);
 }
 
 .card-header {
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  border-bottom-color: var(--ui-border-soft);
+  font-weight: 700;
+  border-bottom-color: var(--ui-line-soft);
+  padding: 0.9rem 1.25rem;
 }
 
 .card-body {
   overflow-wrap: break-word;
+}
+
+/* Narrow single-purpose pages (sign in, register, new ticket). */
+.auth-shell {
+  max-width: 26rem;
+  margin: 2rem auto 0;
+}
+
+.auth-shell-wide {
+  max-width: 38rem;
+}
+
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.auth-brand img {
+  max-height: 48px;
+  width: auto;
+}
+
+.auth-brand .site {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.divider-text {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+  color: var(--ui-text-muted);
+  font-size: 0.875rem;
+}
+
+.divider-text::before,
+.divider-text::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--ui-line);
 }
 
 /* --------------------------------------------------------------------------
@@ -315,25 +575,29 @@ a:focus-visible {
    -------------------------------------------------------------------------- */
 .table {
   --bs-table-bg: transparent;
-  --bs-table-hover-bg: #f8fafc;
+  --bs-table-color: var(--ui-text);
+  --bs-table-hover-bg: var(--ui-surface-sunken);
+  --bs-table-hover-color: var(--ui-text);
   margin-bottom: 0;
 }
 
 .table > :not(caption) > * > * {
-  padding: 0.7rem 1rem;
-  border-bottom-color: var(--ui-border-soft);
+  padding: 0.75rem 1rem;
+  border-bottom-color: var(--ui-line-soft);
   vertical-align: middle;
 }
 
 .table thead th {
-  background-color: #f8fafc;
+  background-color: var(--ui-surface-sunken);
   color: var(--ui-text-muted);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 0.875rem;
+  font-weight: 700;
   white-space: nowrap;
-  border-bottom-color: var(--ui-border);
+  border-bottom-color: var(--ui-line);
+}
+
+.table tbody tr:last-child > * {
+  border-bottom: 0;
 }
 
 .table a {
@@ -341,12 +605,11 @@ a:focus-visible {
 }
 
 .table a:hover {
-  text-decoration: underline !important;
+  text-decoration: underline;
 }
 
-/* Phones: the wide data tables become stacked rows, each cell labelled by
-   its data-label attribute (mirrors the <th> text). Tables without a
-   data-label — action cells — render as a right-aligned button row. */
+/* Phones: wide data tables become stacked rows, each cell labelled by its
+   data-label attribute. Cells without data-label (actions) right-align. */
 @media screen and (max-width: 767.98px) {
   .table-stack thead {
     display: none;
@@ -361,24 +624,19 @@ a:focus-visible {
   }
 
   .table-stack tr {
-    padding: 0.65rem 0;
-    border-bottom: 1px solid var(--ui-border-soft);
-  }
-
-  .table-stack tr:first-child {
-    padding-top: 0.15rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--ui-line-soft);
   }
 
   .table-stack tr:last-child {
-    padding-bottom: 0.15rem;
     border-bottom: 0;
   }
 
   .table-stack td {
     display: grid;
-    grid-template-columns: 8.5rem minmax(0, 1fr);
+    grid-template-columns: 8rem minmax(0, 1fr);
     gap: 0.15rem 1rem;
-    padding: 0.3rem 0;
+    padding: 0.25rem 0 !important;
     border: 0;
     text-align: left;
   }
@@ -389,217 +647,931 @@ a:focus-visible {
 
   .table-stack td::before {
     content: attr(data-label);
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    font-size: 0.875rem;
+    font-weight: 700;
     color: var(--ui-text-muted);
-    padding-top: 0.15rem;
   }
 
   .table-stack td:not([data-label]) {
     display: block;
     text-align: right;
-    padding-top: 0.55rem;
+    padding-top: 0.5rem !important;
   }
 }
 
 /* --------------------------------------------------------------------------
-   8. Badges — soft pills instead of saturated text-bg-* blocks
+   8. Ticket list — the status rail + priority signal (the one loud device)
    -------------------------------------------------------------------------- */
-.badge {
-  --bs-badge-padding-x: 0.7em;
-  --bs-badge-padding-y: 0.4em;
-  --bs-badge-font-weight: 600;
-  --bs-badge-border-radius: 999px;
+.ticket-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: var(--ui-shadow);
+  overflow: hidden;
 }
 
-.badge.text-bg-primary {
-  background-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 15%, #fff) !important;
-  color: color-mix(in srgb, var(--brand-accent, #0d6efd) 78%, #000) !important;
-}
-
-.badge.text-bg-secondary {
-  background-color: #eef1f6 !important;
-  color: #475569 !important;
-}
-
-.badge.text-bg-success {
-  background-color: #dcf5e7 !important;
-  color: #16794a !important;
-}
-
-.badge.text-bg-info {
-  background-color: #e0f2fe !important;
-  color: #0369a1 !important;
-}
-
-.badge.text-bg-warning {
-  background-color: #fef3c7 !important;
-  color: #9a6700 !important;
-}
-
-.badge.text-bg-danger {
-  background-color: #fde8e8 !important;
-  color: #b91c1c !important;
-}
-
-.badge.text-bg-dark {
-  background-color: #e2e8f0 !important;
-  color: #334155 !important;
-}
-
-.badge.text-bg-light {
-  background-color: #f1f5f9 !important;
-  color: #64748b !important;
-  box-shadow: inset 0 0 0 1px #e2e8f0;
-}
-
-/* --------------------------------------------------------------------------
-   9. Alerts, dropdowns, tabs, list groups
-   -------------------------------------------------------------------------- */
-.alert {
-  border-radius: var(--bs-border-radius-lg);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-  font-size: 0.95rem;
-}
-
-.dropdown-menu {
-  padding: 0.4rem;
-  border-radius: var(--bs-border-radius-lg);
-}
-
-.dropdown-item {
-  display: flex;
+.ticket-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 8.5rem 7rem 9.5rem 4.5rem 6.5rem;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.9rem;
-  border-radius: var(--bs-border-radius-sm);
-  font-weight: 500;
-  transition: background-color var(--ui-transition), color var(--ui-transition);
+  gap: 0.5rem 1.25rem;
+  padding: 0.85rem 1.25rem 0.85rem 1.5rem;
+  border-bottom: 1px solid var(--ui-line-soft);
+  transition: background-color var(--ui-transition);
 }
 
-.dropdown-item:hover {
-  background-color: color-mix(in srgb, var(--brand-accent, #0d6efd) 12%, #fff);
-  color: color-mix(in srgb, var(--brand-accent, #0d6efd) 75%, #000);
+.ticket-list-compact .ticket-row {
+  grid-template-columns: minmax(0, 1fr) 8.5rem 7rem 9.5rem 7.5rem;
 }
 
-.nav-tabs {
-  border-bottom: 1px solid var(--ui-border);
+.ticket-row:last-child {
+  border-bottom: 0;
 }
 
-.nav-tabs .nav-link {
-  color: var(--ui-text-muted);
-  font-weight: 500;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
-  margin-bottom: -1px;
-  padding: 0.55rem 0.95rem;
-  transition: color var(--ui-transition), border-color var(--ui-transition),
-    background-color var(--ui-transition);
+.ticket-row:hover {
+  background: var(--ui-surface-sunken);
 }
 
-.nav-tabs .nav-link:hover {
-  color: color-mix(in srgb, var(--brand-accent, #0d6efd) 75%, #000);
-  background-color: #f1f5f9;
-}
-
-.nav-tabs .nav-link.active {
-  color: color-mix(in srgb, var(--brand-accent, #0d6efd) 78%, #000);
-  background-color: transparent;
-  border-bottom: 2px solid var(--brand-accent, #0d6efd);
-  font-weight: 600;
-}
-
-.list-group-item + .list-group-item {
-  border-top-color: var(--ui-border-soft);
-}
-
-/* --------------------------------------------------------------------------
-   10. Empty states + dashboard/report stat numbers
-   -------------------------------------------------------------------------- */
-.empty-state {
-  text-align: center;
-  padding: 2.75rem 1.5rem;
-  color: var(--ui-text-muted);
-}
-
-.empty-state::before {
+/* The rail: a coloured left edge that encodes status down the whole list. */
+.ticket-row::before {
   content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--rail, var(--st-closed));
+}
+
+.ticket-row[data-status="open"] {
+  --rail: var(--st-open);
+}
+
+.ticket-row[data-status="assigned"] {
+  --rail: var(--st-assigned);
+}
+
+.ticket-row[data-status="resolved"] {
+  --rail: var(--st-resolved);
+}
+
+.ticket-row[data-status="closed"] {
+  --rail: var(--st-closed);
+}
+
+.ticket-row[data-status="closed"] .ticket-subject {
+  color: var(--ui-text-muted);
+}
+
+.ticket-subject {
   display: block;
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 1rem;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 12h-6l-2 3h-4l-2-3H2'/%3E%3Cpath d='M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'/%3E%3C/svg%3E")
-    center / contain no-repeat;
-}
-
-.empty-state a {
-  font-weight: 500;
-}
-
-.card.text-center .fs-2 {
-  font-family: var(--ui-font-display);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--brand-accent, #0d6efd);
-}
-
-/* --------------------------------------------------------------------------
-   11. Notifications list
-   -------------------------------------------------------------------------- */
-.list-group-item .btn-link {
-  color: var(--brand-accent, #0d6efd);
+  font-weight: 700;
+  color: var(--ui-text);
   text-decoration: none;
-  font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
-.list-group-item .btn-link:hover {
+/* Whole row is the link target; inner buttons stay clickable above it. */
+.ticket-subject::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.ticket-subject:hover {
   text-decoration: underline;
 }
 
+.ticket-row form,
+.ticket-row .btn {
+  position: relative;
+  z-index: 1;
+}
+
+.ticket-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 1rem;
+  margin-top: 0.2rem;
+  font-size: 0.875rem;
+  color: var(--ui-text-muted);
+}
+
+.ticket-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.ticket-meta .ph {
+  font-size: 1rem;
+}
+
+.ticket-id {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ticket-cell {
+  font-size: 0.9375rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-cell.muted {
+  color: var(--ui-text-muted);
+}
+
+.ticket-age {
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-text-muted);
+  text-align: right;
+}
+
+.ticket-age.is-stale {
+  color: var(--pr-high);
+  font-weight: 700;
+}
+
+.ticket-list-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 8.5rem 7rem 9.5rem 4.5rem 6.5rem;
+  gap: 1.25rem;
+  padding: 0.6rem 1.25rem 0.6rem 1.5rem;
+  background: var(--ui-surface-sunken);
+  border-bottom: 1px solid var(--ui-line);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ui-text-muted);
+}
+
+.ticket-list-compact .ticket-list-head {
+  grid-template-columns: minmax(0, 1fr) 8.5rem 7rem 9.5rem 7.5rem;
+}
+
+.ticket-list-head .end {
+  text-align: right;
+}
+
+.claim-slot {
+  min-width: 6.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 991.98px) {
+  .ticket-list-head {
+    display: none;
+  }
+
+  .ticket-row,
+  .ticket-list-compact .ticket-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.9rem 1rem 0.9rem 1.25rem;
+  }
+
+  .ticket-row > .ticket-main {
+    grid-column: 1 / -1;
+  }
+
+  .ticket-row > .ticket-cell,
+  .ticket-row > .ticket-age {
+    grid-column: auto;
+    text-align: left;
+  }
+
+  .ticket-row .facts-inline {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+  }
+
+  .claim-slot {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (min-width: 992px) {
+  .facts-inline {
+    display: contents;
+  }
+}
+
+/* Status: coloured dot + label. Colour is never the only carrier. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status::before {
+  content: "";
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--dot);
+  flex: none;
+}
+
+.status-open {
+  --dot: var(--st-open);
+}
+
+.status-assigned {
+  --dot: var(--st-assigned);
+}
+
+.status-resolved {
+  --dot: var(--st-resolved);
+}
+
+.status-closed {
+  --dot: transparent;
+}
+
+.status-closed::before {
+  box-shadow: inset 0 0 0 2px var(--st-closed);
+}
+
+/* Priority: four signal bars, n filled, plus the word. */
+.priority {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  color: var(--ui-text);
+}
+
+.signal {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 0.9rem;
+  flex: none;
+}
+
+.signal i {
+  display: block;
+  width: 3px;
+  border-radius: 1px;
+  background: var(--pr-off);
+}
+
+.signal i:nth-child(1) {
+  height: 35%;
+}
+
+.signal i:nth-child(2) {
+  height: 57%;
+}
+
+.signal i:nth-child(3) {
+  height: 79%;
+}
+
+.signal i:nth-child(4) {
+  height: 100%;
+}
+
+.priority-low .signal i:nth-child(-n + 1),
+.priority-normal .signal i:nth-child(-n + 2),
+.priority-high .signal i:nth-child(-n + 3),
+.priority-urgent .signal i {
+  background: var(--sig);
+}
+
+.priority-low {
+  --sig: var(--pr-low);
+  color: var(--ui-text-muted);
+}
+
+.priority-normal {
+  --sig: var(--pr-normal);
+}
+
+.priority-high {
+  --sig: var(--pr-high);
+}
+
+.priority-urgent {
+  --sig: var(--pr-urgent);
+  color: var(--pr-urgent);
+  font-weight: 700;
+}
+
 /* --------------------------------------------------------------------------
-   12. Ticket detail — user-authored line breaks and long tokens
+   9. Status tabs + filter bar (queue)
    -------------------------------------------------------------------------- */
+.status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--ui-line);
+}
+
+/* Phones: one scrollable line instead of wrapping into rows. */
+@media screen and (max-width: 767.98px) {
+  .status-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .status-tabs a {
+    white-space: nowrap;
+  }
+}
+
+.status-tabs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  margin-bottom: -1px;
+  color: var(--ui-text-muted);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.status-tabs a:hover {
+  color: var(--ui-text);
+}
+
+.status-tabs a[aria-current="page"] {
+  color: var(--ui-text);
+  border-bottom-color: var(--accent);
+}
+
+.status-tabs .count {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--ui-line-soft);
+  color: var(--ui-text-muted);
+}
+
+.status-tabs a[aria-current="page"] .count {
+  background: var(--ui-accent-wash);
+  color: var(--ui-accent-ink);
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.filter-bar .filter {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.filter-bar .form-label {
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+  color: var(--ui-text-muted);
+}
+
+.filter-bar .form-select {
+  font-size: 0.9375rem;
+}
+
+.filter-bar .filter-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* With JS, selects submit on change, so the Apply button is redundant. */
+.js .filter-bar [data-autosubmit-hide] {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   10. Ticket detail
+   -------------------------------------------------------------------------- */
+.ticket-head {
+  margin-bottom: 1.5rem;
+}
+
+.ticket-head .ticket-number {
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-text-muted);
+  font-weight: 700;
+}
+
+.ticket-head h1 {
+  margin: 0.15rem 0 0.6rem;
+  max-width: 48rem;
+}
+
+.ticket-head .head-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+  color: var(--ui-text-muted);
+}
+
+.panel {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: var(--ui-shadow);
+  padding: 1.25rem;
+}
+
+.panel + .panel {
+  margin-top: 1rem;
+}
+
+.panel-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+}
+
 .ticket-body,
 .comment-body {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.6;
+  max-width: 72ch;
+}
+
+.resolution {
+  border-left: 4px solid var(--st-resolved);
+}
+
+.resolution .panel-title {
+  color: var(--st-resolved);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Facts list in the sidebar. */
+.facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.6rem 1rem;
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.facts dt {
+  color: var(--ui-text-muted);
+  font-weight: 600;
+}
+
+.facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (min-width: 992px) {
+  .detail-aside {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+.action-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.action-stack .btn {
+  width: 100%;
+}
+
+.action-stack hr {
+  margin: 0.25rem 0;
+  border-color: var(--ui-line);
+  opacity: 1;
+}
+
+/* Thread: a vertical timeline of comments. */
+.thread {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.thread-item {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.75rem;
+  position: relative;
+  padding-bottom: 1.25rem;
+}
+
+/* Connector line between avatars. */
+.thread-item:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: calc(1rem - 1px);
+  top: 2.25rem;
+  bottom: 0.25rem;
+  width: 2px;
+  background: var(--ui-line);
+}
+
+.thread-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--ui-text-muted);
+}
+
+.thread-meta strong {
+  color: var(--ui-text);
+  font-size: 0.9375rem;
+}
+
+.thread-bubble {
+  margin-top: 0.35rem;
+  padding: 0.75rem 1rem;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 0 var(--ui-radius-lg) var(--ui-radius-lg) var(--ui-radius-lg);
+}
+
+.thread-item.is-internal .thread-bubble {
+  background: color-mix(in srgb, #e0a100 12%, var(--ui-surface));
+  border-color: color-mix(in srgb, #e0a100 45%, var(--ui-line));
+}
+
+.internal-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 700;
+  color: color-mix(in srgb, #b07800 85%, var(--ui-text));
+}
+
+.composer {
+  margin-top: 0.5rem;
+}
+
+.composer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* Collapsible secondary forms (edit ticket). */
+details.disclosure {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-lg);
+}
+
+details.disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+details.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.disclosure > summary .ph-caret-down {
+  margin-left: auto;
+  transition: transform var(--ui-transition);
+}
+
+details.disclosure[open] > summary .ph-caret-down {
+  transform: rotate(180deg);
+}
+
+details.disclosure > .disclosure-body {
+  padding: 0 1.25rem 1.25rem;
 }
 
 /* --------------------------------------------------------------------------
-   13. Responsive spacing + reduced motion
+   11. Badges (admin tables, roles, user status)
    -------------------------------------------------------------------------- */
-@media (max-width: 575.98px) {
-  :root {
-    --bs-card-spacer-y: 1rem;
-    --bs-card-spacer-x: 1rem;
-    --bs-card-cap-padding-y: 0.75rem;
-    --bs-card-cap-padding-x: 1rem;
-  }
+.badge {
+  --bs-badge-padding-x: 0.6em;
+  --bs-badge-padding-y: 0.35em;
+  --bs-badge-font-size: 0.8125rem;
+  --bs-badge-font-weight: 700;
+  --bs-badge-border-radius: 0.375rem;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-  }
+.badge.text-bg-primary {
+  background-color: var(--ui-accent-wash) !important;
+  color: var(--ui-accent-ink) !important;
+}
+
+.badge.text-bg-secondary,
+.badge.text-bg-dark,
+.badge.text-bg-light,
+.badge.text-bg-info {
+  background-color: var(--ui-line-soft) !important;
+  color: var(--ui-text-muted) !important;
+}
+
+.badge.text-bg-success {
+  background-color: color-mix(in srgb, var(--st-resolved) 16%, var(--ui-surface)) !important;
+  color: var(--st-resolved) !important;
+}
+
+.badge.text-bg-warning {
+  background-color: color-mix(in srgb, var(--st-open) 16%, var(--ui-surface)) !important;
+  color: var(--st-open) !important;
+}
+
+.badge.text-bg-danger {
+  background-color: color-mix(in srgb, var(--pr-urgent) 14%, var(--ui-surface)) !important;
+  color: var(--pr-urgent) !important;
 }
 
 /* --------------------------------------------------------------------------
-   14. Toasts — flash-message feedback (base.html, shown by app.js)
+   12. Alerts, dropdowns, tabs, list groups
+   -------------------------------------------------------------------------- */
+.alert {
+  border-radius: var(--ui-radius-lg);
+}
+
+.dropdown-menu {
+  padding: 0.35rem;
+  border-radius: var(--ui-radius-lg);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--bs-border-radius-sm);
+  font-weight: 600;
+}
+
+.dropdown-item .ph {
+  font-size: 1.15rem;
+  color: var(--ui-text-muted);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: var(--ui-surface-sunken);
+  color: var(--ui-text);
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+  background-color: var(--ui-accent-wash);
+  color: var(--ui-accent-ink);
+}
+
+.nav-tabs {
+  border-bottom: 1px solid var(--ui-line);
+}
+
+.nav-tabs .nav-link {
+  color: var(--ui-text-muted);
+  font-weight: 600;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  margin-bottom: -1px;
+  padding: 0.55rem 0.85rem;
+}
+
+.nav-tabs .nav-link:hover {
+  color: var(--ui-text);
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--ui-text);
+  background: transparent;
+  border-bottom-color: var(--accent);
+}
+
+.list-group-item {
+  color: var(--ui-text);
+}
+
+/* --------------------------------------------------------------------------
+   13. Notifications
+   -------------------------------------------------------------------------- */
+.notice-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.notice {
+  display: grid;
+  grid-template-columns: 0.6rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--ui-line-soft);
+}
+
+.notice:last-child {
+  border-bottom: 0;
+}
+
+.notice .dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+}
+
+.notice.is-unread .dot {
+  background: var(--accent);
+}
+
+.notice .btn-link {
+  color: var(--ui-text-muted);
+  text-decoration: none;
+  font-weight: 400;
+}
+
+.notice.is-unread .btn-link {
+  color: var(--ui-text);
+  font-weight: 700;
+}
+
+.notice .btn-link:hover {
+  text-decoration: underline;
+}
+
+.notice time {
+  font-size: 0.875rem;
+  color: var(--ui-text-muted);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   14. Dashboard figures + distribution bars
+   -------------------------------------------------------------------------- */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: var(--ui-shadow);
+  margin-bottom: 1.5rem;
+}
+
+.figure {
+  padding: 1.1rem 1.25rem;
+  border-left: 1px solid var(--ui-line-soft);
+}
+
+.figure:first-child {
+  border-left: 0;
+}
+
+.figure .value {
+  display: block;
+  font-size: 1.95rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.figure .label {
+  color: var(--ui-text-muted);
+  font-size: 0.9375rem;
+}
+
+.figure.is-alert .value {
+  color: var(--st-open);
+}
+
+@media screen and (max-width: 767.98px) {
+  .figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .figure:nth-child(3) {
+    border-left: 0;
+  }
+
+  .figure:nth-child(n + 3) {
+    border-top: 1px solid var(--ui-line-soft);
+  }
+}
+
+.dist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.dist li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.dist .bar {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ui-line-soft);
+  overflow: hidden;
+}
+
+.dist .bar span {
+  display: block;
+  height: 100%;
+  width: var(--w, 0%);
+  background: var(--bar, var(--accent));
+  border-radius: 3px;
+}
+
+/* Kept for the reports page summary cards. */
+.card.text-center .fs-2 {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-text);
+}
+
+/* --------------------------------------------------------------------------
+   15. Empty states
+   -------------------------------------------------------------------------- */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--ui-text-muted);
+}
+
+.empty-state .ph {
+  display: block;
+  font-size: 2.5rem;
+  margin: 0 auto 0.75rem;
+  color: color-mix(in srgb, var(--ui-text-muted) 70%, transparent);
+}
+
+.empty-state .empty-title {
+  display: block;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ui-text);
+  margin-bottom: 0.25rem;
+}
+
+.empty-state .btn {
+  margin-top: 1rem;
+}
+
+/* --------------------------------------------------------------------------
+   16. Toasts
    -------------------------------------------------------------------------- */
 .toast-container {
-  z-index: 1090; /* above the navbar (1030) and dropdowns */
+  z-index: 1090;
 }
+
 .toast-container .toast {
   box-shadow: var(--ui-shadow-pop);
+  font-weight: 600;
 }
 
 .toast-container .toast .ph {
@@ -611,5 +1583,32 @@ a:focus-visible {
   .toast-container {
     left: 0.5rem;
     right: 0.5rem;
+  }
+
+  :root {
+    --bs-card-spacer-y: 1rem;
+    --bs-card-spacer-x: 1rem;
+  }
+
+  .panel {
+    padding: 1rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   17. Reduced motion
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
 }

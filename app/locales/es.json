@@ -17,7 +17,6 @@
   "New user {username} registered via Google.": "El nuevo usuario {username} se registró mediante Google.",
   "Accent color": "Color de acento",
   "Active": "Activos",
-  "Add a comment": "Añadir un comentario",
   "Add category": "Añadir categoría",
   "Add department": "Añadir departamento",
   "Admin": "Administrador",
@@ -41,7 +40,6 @@
   "Back to profile": "Volver al perfil",
   "Back to sign in": "Volver a iniciar sesión",
   "Back up now": "Respaldar ahora",
-  "Backup": "Copias de seguridad",
   "Backup created: {name}": "Copia de seguridad creada: {name}",
   "Backup failed. Check the server logs.": "No se pudo crear la copia de seguridad. Revisa los registros del servidor.",
   "Backups": "Copias de seguridad",
@@ -250,5 +248,9 @@
   "urgent": "urgente",
   "user": "usuario",
   "— none —": "— ninguno —",
-  "New Ticket": "Nuevo ticket"
+  "New Ticket": "Nuevo ticket",
+  "Administration": "Administración",
+  "Main": "Principal",
+  "Skip to main content": "Saltar al contenido principal",
+  "Add a comment": "Añadir un comentario"
 }

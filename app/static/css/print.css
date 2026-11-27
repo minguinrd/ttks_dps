@@ -9,9 +9,40 @@
     font-size: 10pt;
   }
 
+  /* Paper is always light, whatever theme the screen was in. */
+  :root,
+  :root[data-bs-theme="dark"] {
+    --ui-bg: #fff;
+    --ui-surface: #fff;
+    --ui-surface-sunken: #f4f4f4;
+    --ui-text: #000;
+    --ui-text-muted: #444;
+    --ui-line: #bbb;
+    --ui-line-soft: #ddd;
+    --ui-shadow: none;
+    color-scheme: light;
+  }
+
+  /* Ticket detail: one column, facts after the thread; nothing sticky. */
+  .col-lg-8,
+  .col-lg-4 {
+    width: 100%;
+  }
+
+  .detail-aside {
+    position: static;
+  }
+
+  .panel,
+  .thread-bubble {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
   /* Screen chrome and controls never print; flash messages (.toast-container
      in base.html) are transient feedback, not report content. */
   .navbar,
+  .skip-link,
   .no-print,
   .toast-container {
     display: none !important;

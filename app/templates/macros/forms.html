@@ -24,7 +24,28 @@
   _("Field must be exactly {max} characters long."),
   _("Field must be between {min} and {max} characters long."),
 ] -%}
-{%- for error in field.errors %}
-<div class="invalid-feedback d-block">{{ _(error) }}</div>
-{%- endfor %}
+{%- if field.errors %}
+<div class="invalid-feedback d-block" id="{{ field.id }}-error">
+  {%- for error in field.errors %}{{ _(error) }}{% if not loop.last %}<br />{% endif %}{% endfor -%}
+</div>
+{%- endif %}
+{%- endmacro %}
+
+{#- One form row: label, control and its errors. Errors mark the control
+   aria-invalid and link it to the message (aria-describedby); extra keyword
+   arguments (autocomplete, rows, placeholder...) pass through to the control. -#}
+{% macro field(f, class="form-control", wrapper="mb-3", hint=None) -%}
+{%- set attrs = dict(kwargs) -%}
+{%- set described = [] -%}
+{%- if hint %}{% set _void = described.append(f.id ~ "-hint") %}{% endif -%}
+{%- if f.errors %}{% set _void = described.append(f.id ~ "-error") %}{% set _void = attrs.update({"aria-invalid": "true"}) %}{% endif -%}
+{%- if described %}{% set _void = attrs.update({"aria-describedby": described | join(" ")}) %}{% endif -%}
+<div class="{{ wrapper }}">
+  {{ field_label(f) }}
+  {{ f(class_=class + (" is-invalid" if f.errors else ""), **attrs) }}
+  {%- if hint %}
+  <div class="form-text" id="{{ f.id }}-hint">{{ hint }}</div>
+  {%- endif %}
+  {{ field_errors(f) }}
+</div>
 {%- endmacro %}

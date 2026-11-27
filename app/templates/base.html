@@ -3,7 +3,24 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
     <title>{% block title %}{{ _("Tickets") }}{% endblock %} · {{ branding.site_name }}</title>
+    {# Theme follows the OS before first paint (no flash), and .js lets CSS
+       hide no-JS fallbacks. Set on <html> at runtime only. #}
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var dark = window.matchMedia("(prefers-color-scheme: dark)");
+        function apply() {
+          root.setAttribute("data-bs-theme", dark.matches ? "dark" : "light");
+        }
+        apply();
+        dark.addEventListener("change", apply);
+        root.classList.add("js");
+      })();
+    </script>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
+    <meta name="theme-color" content="{{ branding.accent_color }}" />
     {# CDN assets are pinned to exact versions with SRI hashes: a tampered or
        re-published file is refused by the browser instead of executed. #}
     <link
@@ -14,12 +31,13 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    {# Atkinson Hyperlegible Next: drawn for maximum legibility, which suits
+       a tool every employee uses, whatever their eyesight. #}
     <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Work+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400..700&display=swap"
       rel="stylesheet"
     />
-    {# Phosphor outline icons (regular weight) — one consistent icon family
-       for buttons and toasts, loaded before main.css so sizes can be tuned. #}
+    {# Phosphor outline icons (regular weight), loaded before main.css. #}
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"
@@ -38,9 +56,7 @@
         --brand-accent-rgb: {{ branding.accent_color[1:3] | int(base=16) }}, {{ branding.accent_color[3:5] | int(base=16) }}, {{ branding.accent_color[5:7] | int(base=16) }};
       }
       .navbar .navbar-nav .nav-link.active {
-        color: #fff;
-        font-weight: 600;
-        background-color: color-mix(in srgb, var(--brand-accent) 62%, #000);
+        --nav-active-color: var(--brand-accent);
       }
     </style>
     {# Page-level @page overrides (landscape reports). Must stay after the
@@ -52,10 +68,9 @@
     data-confirm-yes="{{ _("Yes") }}"
     data-confirm-cancel="{{ _("Cancel") }}"
   >
-    {# Navbar surface, links and shadows come from main.css (accent-driven);
-       no bg-* utility here so nothing overrides the brand background. #}
+    <a class="skip-link" href="#main">{{ _("Skip to main content") }}</a>
     {% set ep = request.endpoint or "" %}
-    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+    <nav class="navbar navbar-expand-lg mb-4" aria-label="{{ _("Main") }}">
       <div class="container">
         <a class="navbar-brand" href="/">
           {%- if branding.has_logo -%}
@@ -78,7 +93,6 @@
         <div class="collapse navbar-collapse" id="mainNav">
           {% if current_user.is_authenticated %}
           <ul class="navbar-nav me-auto">
-            {# Ticket routes land in later tasks; link by pinned path for now. #}
             <li class="nav-item">
               <a
                 class="nav-link{% if ep == 'tickets.mine' %} active{% endif %}"
@@ -105,34 +119,43 @@
               >
             </li>
             {% endif %} {% if current_user.role == "admin" %}
-            <li class="nav-item">
+            {# Every admin tool lives under one menu; the item for the
+               current page is marked active. #}
+            {% set admin_links = [
+              ("admin.dashboard", url_for("admin.dashboard"), "gauge", _("Admin Dashboard")),
+              ("admin.users", url_for("admin.users"), "users", _("Users")),
+              ("admin.departments", url_for("admin.departments"), "buildings", _("Departments")),
+              ("admin.categories", url_for("admin.categories"), "tag", _("Categories")),
+              ("admin.backup_page", url_for("admin.backup_page"), "database", _("Backups")),
+              ("admin.branding", url_for("admin.branding"), "paint-brush", _("Branding")),
+            ] %}
+            <li class="nav-item dropdown">
               <a
-                class="nav-link{% if ep.startswith('admin.') and ep not in ('admin.backup_page', 'admin.branding') %} active{% endif %}"
+                class="nav-link dropdown-toggle{% if ep.startswith('admin.') %} active{% endif %}"
                 href="{{ url_for('admin.dashboard') }}"
-                {% if ep.startswith('admin.') and ep not in ('admin.backup_page', 'admin.branding') %}aria-current="page"{% endif %}
-                >{{ _("Admin") }}</a
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                >{{ _("Administration") }}</a
               >
-            </li>
-            <li class="nav-item">
-              <a
-                class="nav-link{% if ep == 'admin.backup_page' %} active{% endif %}"
-                href="{{ url_for('admin.backup_page') }}"
-                {% if ep == 'admin.backup_page' %}aria-current="page"{% endif %}
-                >{{ _("Backup") }}</a
-              >
-            </li>
-            <li class="nav-item">
-              <a
-                class="nav-link{% if ep == 'admin.branding' %} active{% endif %}"
-                href="{{ url_for('admin.branding') }}"
-                {% if ep == 'admin.branding' %}aria-current="page"{% endif %}
-                >{{ _("Branding") }}</a
-              >
+              <ul class="dropdown-menu">
+                {% for endpoint, href, icon, label in admin_links %}
+                {% if loop.index == 5 %}<li><hr class="dropdown-divider" /></li>{% endif %}
+                <li>
+                  <a
+                    class="dropdown-item{% if ep == endpoint or (endpoint == 'admin.users' and ep.startswith('admin.user')) or (endpoint == 'admin.departments' and ep.startswith('admin.department')) or (endpoint == 'admin.categories' and ep.startswith('admin.categor')) %} active{% endif %}"
+                    href="{{ href }}"
+                    ><i class="ph ph-{{ icon }}" aria-hidden="true"></i>{{ label }}</a
+                  >
+                </li>
+                {% endfor %}
+              </ul>
             </li>
             {% endif %}
           </ul>
-          <ul class="navbar-nav">
+          <ul class="navbar-nav align-items-lg-center gap-lg-1">
             <li class="nav-item">
+              {% set unread = unread_count(current_user) %}
               <a
                 class="nav-link{% if ep == 'main.notifications' %} active{% endif %}"
                 href="{{ url_for('main.notifications') }}"
@@ -140,60 +163,51 @@
                 aria-label="{{ _("Notifications") }}"
               >
                 <span class="nav-icon">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                    focusable="false"
-                  >
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                  </svg>
-                  {% set unread = unread_count(current_user) %} {% if unread > 0 %}
-                  <span class="badge bg-danger" id="unread-badge">{{ unread }}</span>
+                  <i class="ph ph-bell" aria-hidden="true"></i>
+                  {% if unread > 0 %}
+                  <span class="badge rounded-pill bg-danger" id="unread-badge">{{ unread }}</span>
                   {% endif %}
                 </span>
+                <span class="d-lg-none ms-2">{{ _("Notifications") }}</span>
               </a>
             </li>
             <li class="nav-item dropdown">
               <a
-                class="nav-link dropdown-toggle"
+                class="nav-link dropdown-toggle d-flex align-items-center gap-2"
                 href="#"
                 role="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                {% if current_user.avatar_path %}
-                <img
-                  class="rounded-circle"
-                  src="/avatars/{{ current_user.id }}"
-                  alt=""
-                  width="28"
-                  height="28"
-                />
-                {% else %}
-                <span
-                  class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center"
-                  style="width: 28px; height: 28px"
-                  >{{ (current_user.full_name or current_user.username)[:1] | upper }}</span
+                {% from "macros/badges.html" import avatar, role_label %}
+                {{ avatar(current_user, "avatar-sm") }}
+                <span class="text-truncate" style="max-width: 12rem"
+                  >{{ current_user.full_name or current_user.username }}</span
                 >
-                {% endif %}
-                {{ current_user.full_name or current_user.username }}
               </a>
               <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="/profile">{{ _("Profile") }}</a></li>
+                <li>
+                  <span class="dropdown-header"
+                    >{{ current_user.username }} ({{ role_label(current_user.role) }})</span
+                  >
+                </li>
+                <li>
+                  <a class="dropdown-item" href="/profile"
+                    ><i class="ph ph-user-circle" aria-hidden="true"></i>{{ _("Profile") }}</a
+                  >
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('main.profile_password') }}"
+                    ><i class="ph ph-key" aria-hidden="true"></i>{{ _("Change password") }}</a
+                  >
+                </li>
                 <li><hr class="dropdown-divider" /></li>
                 <li>
                   <form method="post" action="{{ url_for('auth.logout') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <button class="dropdown-item" type="submit">{{ _("Logout") }}</button>
+                    <button class="dropdown-item" type="submit">
+                      <i class="ph ph-sign-out" aria-hidden="true"></i>{{ _("Logout") }}
+                    </button>
                   </form>
                 </li>
               </ul>
@@ -223,7 +237,7 @@
       </div>
     </nav>
 
-    <main class="container pb-5">
+    <main class="container pb-5" id="main" tabindex="-1">
       {# Flash messages surface as auto-dismissing toasts (bottom-right):
          transient feedback that clears itself after ~4.5s, per the UX toast
          guidance. Bottom placement keeps them clear of the navbar links.
