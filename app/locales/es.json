@@ -43,6 +43,7 @@
   "Back up now": "Respaldar ahora",
   "Backup": "Copias de seguridad",
   "Backup created: {name}": "Copia de seguridad creada: {name}",
+  "Backup failed. Check the server logs.": "No se pudo crear la copia de seguridad. Revisa los registros del servidor.",
   "Backups": "Copias de seguridad",
   "Branding": "Marca",
   "Branding updated.": "Marca actualizada.",

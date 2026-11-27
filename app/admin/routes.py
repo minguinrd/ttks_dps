@@ -1,4 +1,5 @@
 import re
+import sqlite3
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -374,7 +375,12 @@ def backup_page():
 @login_required
 @role_required("admin")
 def backup_create():
-    path = run_backup_cycle()
+    try:
+        path = run_backup_cycle()
+    except (OSError, sqlite3.Error):
+        current_app.logger.exception("manual backup failed")
+        flash(_("Backup failed. Check the server logs."), "danger")
+        return redirect(url_for("admin.backup_page"))
     flash(_("Backup created: {name}").format(name=path.name), "success")
     return redirect(url_for("admin.backup_page"))
 

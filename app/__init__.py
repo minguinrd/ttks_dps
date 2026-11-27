@@ -10,6 +10,7 @@ from app import (
 )
 from app.admin import admin_bp
 from app.auth import auth_bp
+from app.backup import parse_backup_hour
 from app.branding import get_branding
 from app.cli import restore_backup, seed_admin
 from app.config import Config
@@ -31,6 +32,10 @@ def create_app(config: dict | None = None) -> Flask:
     app.config.from_object(Config)
     if config:
         app.config.update(config)
+
+    # Fail fast on a malformed BACKUP_HOUR: it would otherwise kill the
+    # scheduler thread silently.
+    parse_backup_hour(app.config["BACKUP_HOUR"])
 
     os.makedirs(app.config["DATA_DIR"], exist_ok=True)
     os.makedirs(app.config["AVATAR_DIR"], exist_ok=True)
