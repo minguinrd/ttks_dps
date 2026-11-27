@@ -160,6 +160,10 @@ def user_approve(user_id):
 @login_required
 @role_required("admin")
 def user_reject(user_id):
+    # Rejecting sets "suspended" too, so the same self-lockout guard applies.
+    if user_id == current_user.id:
+        flash(_("You cannot suspend your own account."), "danger")
+        return redirect(url_for("admin.users"))
     return _set_status(user_id, "suspended", _("User rejected."))
 
 

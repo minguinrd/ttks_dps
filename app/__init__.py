@@ -3,6 +3,7 @@ import os
 from flask import Flask, flash, g, redirect, request, url_for
 from flask_login import current_user
 from werkzeug.exceptions import Forbidden, RequestEntityTooLarge
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app import (
     backup,
@@ -26,6 +27,13 @@ from app.tickets import tickets_bp
 PASSWORD_CHANGE_EXEMPT = {"static", "auth.logout", "main.profile_password"}
 FORCED_PASSWORD_CHANGE_MESSAGE = _("You must change your password before continuing.")
 
+# Baseline security headers for every response (a route may set its own first).
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+}
+
 
 def create_app(config: dict | None = None) -> Flask:
     app = Flask(__name__)
@@ -33,9 +41,15 @@ def create_app(config: dict | None = None) -> Flask:
     if config:
         app.config.update(config)
 
-    # Fail fast on a malformed BACKUP_HOUR: it would otherwise kill the
-    # scheduler thread silently.
+    # Fail fast on configuration that would otherwise break at request time
+    # (unsigned sessions) or silently (a dead backup scheduler thread).
+    if not app.config.get("SECRET_KEY"):
+        raise RuntimeError("SECRET_KEY is not set; see .env.example")
     parse_backup_hour(app.config["BACKUP_HOUR"])
+
+    if app.config["TRUSTED_PROXIES"]:
+        hops = app.config["TRUSTED_PROXIES"]
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops, x_proto=hops, x_host=hops)
 
     os.makedirs(app.config["DATA_DIR"], exist_ok=True)
     os.makedirs(app.config["AVATAR_DIR"], exist_ok=True)
@@ -120,6 +134,12 @@ def create_app(config: dict | None = None) -> Flask:
         ):
             flash(_(FORCED_PASSWORD_CHANGE_MESSAGE), "warning")
             return redirect(url_for("main.profile_password"))
+
+    @app.after_request
+    def set_security_headers(response):
+        for header, value in SECURITY_HEADERS.items():
+            response.headers.setdefault(header, value)
+        return response
 
     @app.errorhandler(RequestEntityTooLarge)
     def handle_request_too_large(error):

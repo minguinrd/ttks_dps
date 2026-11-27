@@ -169,7 +169,13 @@ def branding_logo():
     path = Path(current_app.config["DATA_DIR"]) / "branding" / name
     if not path.is_file():
         abort(404)
-    return send_file(path, mimetype=mimetype)
+    response = send_file(path, mimetype=mimetype)
+    # SVG logos can carry script: opened directly, they must not run in the
+    # app's origin. A sandboxed, script-free CSP keeps them inert.
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+    )
+    return response
 
 
 def _render_profile(avatar_form, language_form=None):

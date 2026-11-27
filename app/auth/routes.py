@@ -1,5 +1,8 @@
-from flask import current_app, flash, redirect, render_template, url_for
+from urllib.parse import urlsplit
+
+from flask import current_app, flash, redirect, render_template, request, url_for
 from flask_login import login_required, login_user, logout_user
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.auth import auth_bp
 from app.auth.forms import LoginForm, RegisterForm
@@ -19,6 +22,26 @@ GOOGLE_FAILURE_MESSAGE = _(
 )
 
 
+# Checked against when the username does not exist, so a failed login costs the
+# same hashing work either way and response time does not reveal valid names.
+_DUMMY_PASSWORD_HASH = generate_password_hash("dummy-password-for-timing")
+
+
+def _safe_next_url() -> str | None:
+    """``?next=`` (set by Flask-Login's login redirect) if it is a local path.
+
+    Only same-site absolute paths are accepted ("/tickets/5"); anything with a
+    scheme or host, or a protocol-relative ``//host``, is an open redirect.
+    """
+    target = request.args.get("next", "")
+    if not target.startswith("/") or target.startswith("//") or "\\" in target:
+        return None
+    parts = urlsplit(target)
+    if parts.scheme or parts.netloc:
+        return None
+    return target
+
+
 def _google_configured() -> bool:
     return bool(
         current_app.config["GOOGLE_CLIENT_ID"] and current_app.config["GOOGLE_CLIENT_SECRET"]
@@ -26,6 +49,7 @@ def _google_configured() -> bool:
 
 
 def _google_failure():
+    db.session.rollback()
     flash(_(GOOGLE_FAILURE_MESSAGE), "danger")
     return redirect(url_for("auth.login"))
 
@@ -69,7 +93,10 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = db.session.scalar(db.select(User).filter_by(username=form.username.data))
-        if user is None or not user.check_password(form.password.data):
+        if user is None:
+            check_password_hash(_DUMMY_PASSWORD_HASH, form.password.data)
+            flash(_("Invalid username or password."), "danger")
+        elif not user.check_password(form.password.data):
             flash(_("Invalid username or password."), "danger")
         elif user.status == "pending":
             flash(_(PENDING_MESSAGE), "warning")
@@ -77,7 +104,7 @@ def login():
             flash(_(SUSPENDED_MESSAGE), "danger")
         else:
             login_user(user)
-            return redirect(url_for("main.index"))
+            return redirect(_safe_next_url() or url_for("main.index"))
     return render_template("auth/login.html", form=form)
 
 
@@ -91,6 +118,7 @@ def google():
         # construction failures collapse into the generic message, not a 500.
         return google_client.authorize_redirect(url_for("auth.google_callback", _external=True))
     except Exception:
+        current_app.logger.exception("Google sign-in redirect failed")
         return _google_failure()
 
 
@@ -111,6 +139,7 @@ def google_callback():
             userinfo["email"], sub=userinfo["sub"], name=userinfo.get("name")
         )
     except Exception:
+        current_app.logger.exception("Google sign-in callback failed")
         return _google_failure()
     # The status gate sits outside the try: refusals show their specific
     # pinned message, and only active accounts get a session.

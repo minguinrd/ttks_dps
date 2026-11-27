@@ -203,6 +203,9 @@ def test_logo_upload_served_publicly(app, db_schema, client, user_factory, login
     resp = anon.get("/branding/logo")
     assert resp.status_code == 200
     assert resp.headers["Content-Type"].startswith("image/")
+    # Logos (SVG included) are served script-free and sandboxed.
+    assert "sandbox" in resp.headers["Content-Security-Policy"]
+    assert "default-src 'none'" in resp.headers["Content-Security-Policy"]
     html = anon.get("/auth/login").get_data(as_text=True)
     assert '<img src="/branding/logo"' in html
 
