@@ -4,6 +4,7 @@ from enum import StrEnum
 from sqlalchemy.orm import selectinload
 
 from app.extensions import db
+from app.i18n import N_
 from app.models.user import User
 
 
@@ -34,6 +35,19 @@ class Priority(StrEnum):
     urgent = "urgent"
 
 
+# System comments are stored in English and translated when rendered (the
+# catalog's placeholder patterns match the stored sentence); N_ registers
+# each shape as a catalog key.
+SYSTEM_EVENT_KEYS = (
+    N_("Claimed by {name}."),
+    N_("Released by {name}."),
+    N_("Assigned to {agent} by {actor}."),
+    N_("Resolved by {name}."),
+    N_("Reopened by {name}."),
+    N_("Closed by {name}."),
+)
+
+
 class InvalidTransition(Exception):
     """Raised when a ticket status transition is not allowed."""
 
@@ -51,6 +65,8 @@ class Comment(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     body = db.Column(db.Text, nullable=False)
     is_internal = db.Column(db.Boolean, nullable=False, default=False)
+    # Status-change entries written by the ticket itself ("Claimed by …").
+    is_system = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     ticket = db.relationship("Ticket", back_populates="comments")
@@ -100,7 +116,7 @@ class Ticket(db.Model):
         )
 
     def add_system_comment(self, actor: User, text: str) -> Comment:
-        comment = Comment(ticket=self, author=actor, body=text)
+        comment = Comment(ticket=self, author=actor, body=text, is_system=True)
         db.session.add(comment)
         return comment
 

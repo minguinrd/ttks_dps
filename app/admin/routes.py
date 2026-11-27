@@ -19,12 +19,12 @@ from app.admin.forms import (
 )
 from app.backup import run_backup_cycle
 from app.branding import get_branding, get_setting, set_setting
+from app.durations import format_duration
 from app.extensions import db
 from app.i18n import _
 from app.main.routes import branding_upload_error_response
 from app.models import Category, Department, Priority, Role, Setting, Ticket, TicketStatus, User
 from app.permissions import role_required
-from app.reports.stats import format_duration
 from app.search import LIKE_ESCAPE, like_pattern
 
 

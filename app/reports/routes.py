@@ -5,13 +5,14 @@ from datetime import date, datetime, time, timedelta
 from flask import Response, render_template, request, url_for
 from flask_login import login_required
 
+from app.durations import format_duration, resolution_time
 from app.extensions import db
 from app.i18n import _
 from app.models import Category, Ticket
 from app.permissions import role_required
 from app.reports import reports_bp
 from app.reports.forms import ReportForm
-from app.reports.stats import build_report, format_duration, naive_utc_now, resolution_time
+from app.reports.stats import build_report, naive_utc_now
 
 # Query parameters the filter form owns, in display order.
 FILTER_PARAMS = (

@@ -107,3 +107,12 @@ def translate(message: str, **params) -> str:
 
 # Python code marks strings as ``from app.i18n import _``.
 _ = translate
+
+
+def N_(message: str) -> str:  # noqa: N802 - gettext's conventional name
+    """Mark ``message`` as a catalog key without translating it (gettext_noop).
+
+    For text stored in English and translated when rendered, such as the
+    system comments on a ticket.
+    """
+    return message

@@ -6,7 +6,8 @@ import re
 from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 
-from app.reports.stats import backlog_aging, format_duration, resolution_time, trend
+from app.durations import format_duration, resolution_time
+from app.reports.stats import backlog_aging, trend
 
 
 def _text(html):

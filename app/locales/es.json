@@ -345,5 +345,16 @@
   "Showing {first}–{last} of {total}": "Mostrando {first}–{last} de {total}",
   "Sort by": "Ordenar por",
   "The queue is empty.": "La cola está vacía.",
-  "Text or #number": "Texto o n.º de ticket"
+  "Text or #number": "Texto o n.º de ticket",
+  "Assigned to {agent} by {actor}.": "{actor} asignó el ticket a {agent}.",
+  "Claimed by {name}.": "{name} tomó el ticket.",
+  "Closed by {name}.": "{name} cerró el ticket.",
+  "Released by {name}.": "{name} liberó el ticket.",
+  "Reopened by {name}.": "{name} reabrió el ticket.",
+  "Resolved by {name}.": "{name} resolvió el ticket.",
+  "Ctrl + Enter to send.": "Ctrl + Intro para enviar.",
+  "More from {name}": "Más tickets de {name}",
+  "Only agents and admins will see this note.": "Solo los agentes y administradores verán esta nota.",
+  "Reopen this ticket? It goes back to the queue.": "¿Reabrir este ticket? Volverá a la cola.",
+  "See all in the queue": "Ver todos en la cola"
 }

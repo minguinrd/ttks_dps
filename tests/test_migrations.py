@@ -65,7 +65,7 @@ def test_upgrade_with_child_rows(tmp_path):
     _seed_child_rows(_db_path(app))
 
     # to head: add google_sub + settings + user language + notification keys
-    # + spanish default + categories fk
+    # + spanish default + categories fk + comment is_system
     result = _upgrade(app)
     assert result.exit_code == 0, f"{result.output}{result.exception!r}"
 
@@ -77,7 +77,7 @@ def test_upgrade_with_child_rows(tmp_path):
     assert alice_row[0] == "es"
     assert conn.execute("SELECT count(*) FROM tickets").fetchone()[0] == 1
     version = conn.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-    assert version == "b95399332e12"
+    assert version == "3c1f0a9d7e21"
     seeded = [row[0] for row in conn.execute("SELECT name FROM categories ORDER BY id")]
     assert seeded == ["Hardware", "Software", "Network", "Access", "Other"]
     ticket_row = conn.execute("SELECT category_id FROM tickets").fetchone()
@@ -163,7 +163,7 @@ def test_downgrade_restores_legacy_category_column(tmp_path):
     result = _upgrade(app, "751feed02aec")
     assert result.exit_code == 0, result.output
     _seed_child_rows(_db_path(app))
-    result = _upgrade(app)  # converts category -> category_id
+    result = _upgrade(app, "b95399332e12")  # converts category -> category_id
     assert result.exit_code == 0, f"{result.output}{result.exception!r}"
 
     # flask-migrate's revision argument defaults to '-1' (one step back);
@@ -180,4 +180,51 @@ def test_downgrade_restores_legacy_category_column(tmp_path):
     assert conn.execute("SELECT category FROM tickets").fetchone()[0] == "hardware"
     tables = [row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")]
     assert "categories" not in tables
+    conn.close()
+
+
+def test_comment_is_system_backfill_and_downgrade(tmp_path):
+    app = _fresh_app(tmp_path)
+    result = _upgrade(app, "751feed02aec")
+    assert result.exit_code == 0, result.output
+    _seed_child_rows(_db_path(app))
+    result = _upgrade(app, "b95399332e12")
+    assert result.exit_code == 0, f"{result.output}{result.exception!r}"
+    conn = sqlite3.connect(_db_path(app))
+    ticket_id, user_id = conn.execute("SELECT id, requester_id FROM tickets").fetchone()
+    bodies = [
+        ("Claimed by Ana.", 0),
+        ("Assigned to Ana by Bo.", 0),
+        ("Closed by Ana.", 0),
+        ("Thanks, it works now.", 0),
+        # Internal notes are never system entries, whatever their text.
+        ("Resolved by restarting.", 1),
+    ]
+    conn.executemany(
+        "INSERT INTO comments (ticket_id, author_id, body, is_internal, created_at)"
+        " VALUES (?, ?, ?, ?, '2026-01-01 00:00:00')",
+        [(ticket_id, user_id, body, internal) for body, internal in bodies],
+    )
+    conn.commit()
+    conn.close()
+
+    result = _upgrade(app)
+    assert result.exit_code == 0, f"{result.output}{result.exception!r}"
+    conn = sqlite3.connect(_db_path(app))
+    flags = dict(conn.execute("SELECT body, is_system FROM comments"))
+    assert flags == {
+        "Claimed by Ana.": 1,
+        "Assigned to Ana by Bo.": 1,
+        "Closed by Ana.": 1,
+        "Thanks, it works now.": 0,
+        "Resolved by restarting.": 0,
+    }
+    conn.close()
+
+    result = app.test_cli_runner().invoke(args=["db", "downgrade"])
+    assert result.exit_code == 0, result.output
+    conn = sqlite3.connect(_db_path(app))
+    cols = [row[1] for row in conn.execute("PRAGMA table_info(comments)")]
+    assert "is_system" not in cols
+    assert conn.execute("SELECT count(*) FROM comments").fetchone()[0] == 5
     conn.close()

@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from app.durations import format_duration, resolution_time
 from app.extensions import db
 from app.i18n import _
 from app.models import (
@@ -10,6 +11,7 @@ from app.models import (
     Comment,
     Department,
     InvalidTransition,
+    Notification,
     Role,
     Ticket,
     TicketStatus,
@@ -164,7 +166,19 @@ def new():
 @tickets_bp.route("/<int:ticket_id>")
 @login_required
 def detail(ticket_id):
-    return _render_detail(_visible_ticket_or_404(ticket_id))
+    ticket = _visible_ticket_or_404(ticket_id)
+    # Opening the ticket is reading about it: clear this viewer's pings for it.
+    db.session.execute(
+        db.update(Notification)
+        .where(
+            Notification.user_id == current_user.id,
+            Notification.ticket_id == ticket.id,
+            Notification.is_read.is_(False),
+        )
+        .values(is_read=True)
+    )
+    db.session.commit()
+    return _render_detail(ticket)
 
 
 @tickets_bp.route("/<int:ticket_id>/comments", methods=["POST"])
@@ -437,10 +451,23 @@ def _render_detail(ticket: Ticket, resolve_form: ResolveForm | None = None):
         for comment in ticket.comments
         if current_user.role != Role.user or not comment.is_internal
     ]
+    # Staff get the requester's other recent tickets as context.
+    related = []
+    if current_user.role != Role.user:
+        related = db.session.scalars(
+            db.select(Ticket)
+            .where(Ticket.requester_id == ticket.requester_id, Ticket.id != ticket.id)
+            .order_by(Ticket.created_at.desc())
+            .limit(5)
+        ).all()
     return render_template(
         "tickets/detail.html",
         ticket=ticket,
         comments=comments,
+        public_count=sum(1 for comment in comments if not comment.is_system),
+        related=related,
+        resolution_time=resolution_time(ticket),
+        duration=format_duration,
         comment_form=CommentForm(),
         edit_form=TicketEditForm(obj=ticket),
         can_edit=_can_edit(ticket),

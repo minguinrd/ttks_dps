@@ -84,10 +84,17 @@
     {% endif %}
 
     <section class="mt-4" aria-labelledby="thread-title">
-      <h2 class="h5 mb-3" id="thread-title">{{ _("Thread") }}</h2>
+      <h2 class="h5 mb-3" id="thread-title">
+        {{ _("Thread") }} <span class="text-muted fw-normal">({{ public_count }})</span>
+      </h2>
       {% if comments %}
       <ol class="thread">
-        {% for comment in comments %} {% if not comment.is_internal or current_user.role != "user" %}
+        {% for comment in comments %} {% if comment.is_system %}
+        <li class="thread-event">
+          <i class="ph ph-arrows-left-right" aria-hidden="true"></i>
+          <p>{{ _(comment.body) }} {{ when(comment.created_at) }}</p>
+        </li>
+        {% elif not comment.is_internal or current_user.role != "user" %}
         <li class="thread-item{% if comment.is_internal %} is-internal{% endif %}">
           {{ avatar(comment.author) }}
           <div>
@@ -117,7 +124,13 @@
         >
           {{ comment_form.hidden_tag() }}
           <div class="mb-3">
-            {{ field_label(comment_form.body) }} {{ comment_form.body(class_="form-control" + (" is-invalid" if comment_form.body.errors else ""), rows="3") }} {{ field_errors(comment_form.body) }}
+            {{ field_label(comment_form.body) }} {{ comment_form.body(class_="form-control" + (" is-invalid" if comment_form.body.errors else ""), rows="3", **{"data-submit-shortcut": "", "aria-describedby": "composer-hint"}) }} {{ field_errors(comment_form.body) }}
+            <p class="composer-hint" id="composer-hint">
+              <span class="when-public">{{ _("Ctrl + Enter to send.") }}</span>
+              {% if current_user.role != "user" %}<span class="when-internal"
+                ><i class="ph ph-lock-simple" aria-hidden="true"></i>{{ _("Only agents and admins will see this note.") }}</span
+              >{% endif %}
+            </p>
           </div>
           <div class="composer-actions">
             {% if current_user.role != "user" %}
@@ -174,7 +187,7 @@
             method="post"
             action="{{ url_for('tickets.reopen', ticket_id=ticket.id) }}"
             class="no-print"
-            data-confirm="{{ _("Reopen this ticket? It goes back to the assigned state.") }}"
+            data-confirm="{{ _("Reopen this ticket? It goes back to the assigned state.") if ticket.assignee_id else _("Reopen this ticket? It goes back to the queue.") }}"
           >
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="mb-2">
@@ -236,8 +249,39 @@
           <dd>{{ when(ticket.created_at) }}</dd>
           <dt>{{ _("Updated") }}</dt>
           <dd>{{ when(ticket.updated_at) }}</dd>
+          {% if resolution_time is not none %}
+          <dt>{{ _("Resolved") }}</dt>
+          <dd>{{ when(ticket.resolved_at) }}</dd>
+          <dt>{{ _("Time to resolve") }}</dt>
+          <dd>{{ duration(resolution_time) }}</dd>
+          {% endif %}
+          {% if ticket.status == "closed" and ticket.closed_at %}
+          <dt>{{ _("Closed") }}</dt>
+          <dd>{{ when(ticket.closed_at) }}</dd>
+          {% endif %}
         </dl>
       </section>
+
+      {% if related %}
+      <section class="panel no-print" aria-labelledby="related-title">
+        <h2 class="panel-title" id="related-title">
+          {{ _("More from {name}", name=ticket.requester.full_name or ticket.requester.username) }}
+        </h2>
+        <ul class="related-list">
+          {% for other in related %}
+          <li>
+            <a href="{{ url_for('tickets.detail', ticket_id=other.id) }}"
+              ><span class="text-muted">#{{ other.id }}</span> {{ other.subject }}</a
+            >
+            {{ status_badge(other.status) }}
+          </li>
+          {% endfor %}
+        </ul>
+        <a class="small" href="{{ url_for('tickets.queue', status='all', requester_id=ticket.requester_id) }}"
+          >{{ _("See all in the queue") }}</a
+        >
+      </section>
+      {% endif %}
     </div>
   </aside>
 </div>

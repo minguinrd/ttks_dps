@@ -68,6 +68,16 @@ document.addEventListener("change", function (event) {
   if (form && form.hasAttribute("data-autosubmit")) form.requestSubmit();
 });
 
+// Ctrl/Cmd + Enter sends a textarea's form (the comment composer).
+document.addEventListener("keydown", function (event) {
+  var field = event.target;
+  if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey)) return;
+  if (!(field instanceof HTMLTextAreaElement) || !field.hasAttribute("data-submit-shortcut")) return;
+  if (!field.value.trim() || !field.form) return;
+  event.preventDefault();
+  field.form.requestSubmit();
+});
+
 // GET filter forms leave empty and default-valued fields out of the URL, so
 // links stay short and "no filter" reads as no parameter at all. Listening
 // in the capture phase catches the formdata event of every form.

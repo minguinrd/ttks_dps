@@ -1234,7 +1234,44 @@ textarea.form-control {
   padding-bottom: 1.25rem;
 }
 
+/* Status changes: a quiet line on the timeline, not a speech bubble. */
+.thread-event {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  column-gap: 0.75rem;
+  align-items: center;
+  position: relative;
+  padding-bottom: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--ui-text-muted);
+}
+
+.thread-event > .ph {
+  justify-self: center;
+  position: relative;
+  z-index: 1;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
+  font-size: 0.85rem;
+}
+
+.thread-event > p {
+  margin: 0;
+}
+
+.thread-event time {
+  margin-left: 0.5rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
 /* Connector line between avatars. */
+.thread-event:not(:last-child)::before,
 .thread-item:not(:last-child)::before {
   content: "";
   position: absolute;
@@ -1282,6 +1319,62 @@ textarea.form-control {
 
 .composer {
   margin-top: 0.5rem;
+  transition: border-color var(--ui-transition), background-color var(--ui-transition);
+}
+
+.composer-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--ui-text-muted);
+}
+
+.composer-hint .when-internal {
+  display: none;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 700;
+  color: color-mix(in srgb, #b07800 85%, var(--ui-text));
+}
+
+/* Writing an internal note: the composer takes the internal-note colours so
+   it is never mistaken for a reply the requester will read. */
+.composer:has(.form-check-input:checked) {
+  background: color-mix(in srgb, #e0a100 10%, var(--ui-surface));
+  border-color: color-mix(in srgb, #e0a100 45%, var(--ui-line));
+}
+
+.composer:has(.form-check-input:checked) .when-internal {
+  display: inline-flex;
+}
+
+.composer:has(.form-check-input:checked) .when-public {
+  display: none;
+}
+
+.related-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.related-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.related-list a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.related-list .status {
+  flex: none;
+  font-size: 0.8125rem;
 }
 
 .composer-actions {
