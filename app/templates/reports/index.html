@@ -1,5 +1,5 @@
 {% extends "base.html" %} {% from "macros/badges.html" import status_badge, category_badge,
-priority_badge, priority_label %} {% from "macros/forms.html" import field_label %} {% block title %}{{ _("Reports") }}{% endblock %} {% block page_css %}
+priority_badge, priority_label, status_label %} {% from "macros/forms.html" import field_label %} {% block title %}{{ _("Reports") }}{% endblock %} {% block page_css %}
 <style>
   /* Scoped to this document: print.css keeps portrait A4 for the
      ticket-detail printout; this later @page wins the cascade. */
@@ -8,17 +8,58 @@ priority_badge, priority_label %} {% from "macros/forms.html" import field_label
     margin: 1.5cm;
   }
 </style>
-{% endblock %} {% block content %}
+{% endblock %} {% macro breakdown(rows, label_heading, is_priority=False) -%}
+<div class="table-responsive">
+  <table class="table report-table mb-0">
+    <thead>
+      <tr>
+        <th scope="col">{{ label_heading }}</th>
+        <th scope="col" class="text-end">{{ _("Tickets") }}</th>
+        <th scope="col" class="text-end">{{ _("Pending") }}</th>
+        <th scope="col" class="text-end">{{ _("Resolved") }}</th>
+        <th scope="col" class="text-end">{{ _("Median time") }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr{% if not row.total %} class="is-empty"{% endif %}>
+        <th scope="row">
+          {%- if is_priority %}{{ priority_badge(row.label) }}{% else %}{{ row.label }}{% endif -%}
+        </th>
+        <td class="num">{{ row.total }}</td>
+        <td class="num">{{ row.backlog }}</td>
+        <td class="num">{{ row.resolved }}</td>
+        <td class="num">{{ duration(row.median) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{%- endmacro %} {% block content %}
 <div class="page-head">
-  <h1>{{ _("Reports") }}</h1>
-  <button class="btn btn-outline-secondary no-print" onclick="window.print()">
-    <i class="ph ph-printer" aria-hidden="true"></i>{{ _("Print / Save as PDF") }}
-  </button>
+  <div>
+    <h1>{{ _("Reports") }}</h1>
+    <p>{{ _("Volume, resolution times and workload for the tickets that match the filters.") }}</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2 no-print">
+    <a class="btn btn-outline-secondary" href="{{ export_url }}" download
+      ><i class="ph ph-file-csv" aria-hidden="true"></i>{{ _("Export CSV") }}</a
+    >
+    <button class="btn btn-outline-secondary" onclick="window.print()">
+      <i class="ph ph-printer" aria-hidden="true"></i>{{ _("Print / Save as PDF") }}
+    </button>
+  </div>
 </div>
 
 {# Filters narrow the report via query params; an empty value means "no filter". #}
 <form method="get" action="{{ url_for('reports.index') }}" class="card shadow-sm mb-3 no-print">
   <div class="card-body">
+    <nav class="report-presets mb-3" aria-label="{{ _("Date range") }}">
+      {% for preset in presets %}
+      <a class="btn btn-sm {{ 'btn-primary' if preset.active else 'btn-outline-secondary' }}"
+        href="{{ preset.url }}"{% if preset.active %} aria-current="true"{% endif %}>{{ preset.label }}</a>
+      {% endfor %}
+    </nav>
     <div class="row g-2 align-items-end">
       <div class="col-6 col-md-4 col-xl-3">
         {{ field_label(form.date_from) }} {{ form.date_from(class_="form-control") }}
@@ -55,99 +96,182 @@ priority_badge, priority_label %} {% from "macros/forms.html" import field_label
   </div>
 </form>
 
-{# Everything between the summary and the table prints as one document. #}
+{# Everything below prints as one document. #}
 <div class="printable">
-  <div class="row g-3 mb-3">
-    <div class="col">
-      <div class="card shadow-sm text-center">
-        <div class="card-body py-2">
-          <div class="text-muted small">{{ _("Total") }}</div>
-          <div class="fs-2 fw-semibold">{{ summary.total }}</div>
-        </div>
-      </div>
+  <p class="report-scope">
+    {% if filters %}
+    {% for label, value in filters %}<span class="scope-item"><strong>{{ label }}:</strong> {{ value }}</span>{% endfor %}
+    {% else %}
+    <span class="scope-item">{{ _("All tickets") }}</span>
+    {% endif %}
+    <span class="scope-item text-muted">{{ _("Generated") }} {{ now.strftime("%Y-%m-%d %H:%M") }} UTC</span>
+  </p>
+
+  <div class="figures report-figures">
+    <div class="figure">
+      <span class="label">{{ _("Total") }}</span>
+      <span class="value">{{ report.total }}</span>
     </div>
-    <div class="col">
-      <div class="card shadow-sm text-center">
-        <div class="card-body py-2">
-          <div class="text-muted small">{{ _("Open") }}</div>
-          <div class="fs-2 fw-semibold">{{ summary.open }}</div>
-        </div>
-      </div>
+    <div class="figure">
+      <span class="label">{{ _("Pending") }}</span>
+      <span class="value">{{ report.backlog }}</span>
+      <span class="hint">{{ _("open or in progress") }}</span>
     </div>
-    <div class="col">
-      <div class="card shadow-sm text-center">
-        <div class="card-body py-2">
-          <div class="text-muted small">{{ _("Assigned") }}</div>
-          <div class="fs-2 fw-semibold">{{ summary.assigned }}</div>
-        </div>
-      </div>
+    <div class="figure">
+      <span class="label">{{ _("Resolution rate") }}</span>
+      <span class="value">{{ report.resolution_rate ~ " %" if report.resolution_rate is not none else "—" }}</span>
+      <span class="hint">{{ _("{n} resolved", n=report.resolved) }}</span>
     </div>
-    <div class="col">
-      <div class="card shadow-sm text-center">
-        <div class="card-body py-2">
-          <div class="text-muted small">{{ _("Resolved") }}</div>
-          <div class="fs-2 fw-semibold">{{ summary.resolved }}</div>
-        </div>
-      </div>
+    <div class="figure">
+      <span class="label">{{ _("Median time to resolve") }}</span>
+      <span class="value">{{ duration(report.median_resolution) }}</span>
+      <span class="hint">{{ _("average") }} {{ duration(report.mean_resolution) }}</span>
     </div>
-    <div class="col">
-      <div class="card shadow-sm text-center">
-        <div class="card-body py-2">
-          <div class="text-muted small">{{ _("Closed") }}</div>
-          <div class="fs-2 fw-semibold">{{ summary.closed }}</div>
-        </div>
-      </div>
+    <div class="figure{% if report.oldest_unassigned_age and report.oldest_unassigned_age.days >= 1 %} is-alert{% endif %}">
+      <span class="label">{{ _("Oldest unassigned ticket") }}</span>
+      <span class="value">{{ duration(report.oldest_unassigned_age) }}</span>
+      {% if report.oldest_unassigned %}
+      <a class="hint" href="{{ url_for('tickets.detail', ticket_id=report.oldest_unassigned.id) }}"
+        >#{{ report.oldest_unassigned.id }} {{ report.oldest_unassigned.created_at.strftime("%Y-%m-%d %H:%M") }}</a
+      >
+      {% endif %}
     </div>
   </div>
 
   <div class="row g-3 mb-3">
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-header">{{ _("By category") }}</div>
-        <table class="table mb-0">
-          <tbody>
-            {% for name, count in summary.by_category.items() %}
-            <tr>
-              <td>{{ name }}</td>
-              <td class="text-end">{{ count }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-header">{{ _("By priority") }}</div>
-        <table class="table mb-0">
-          <tbody>
-            {% for name, count in summary.by_priority.items() %}
-            <tr>
-              <td>{{ priority_label(name) }}</td>
-              <td class="text-end">{{ count }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-header">{{ _("Needs attention") }}</div>
-        <ul class="list-group list-group-flush">
-          <li class="list-group-item d-flex justify-content-between">
-            {{ _("Oldest unassigned ticket") }}
-            <span>
-              {{ summary.oldest_unassigned.strftime("%Y-%m-%d %H:%M") if summary.oldest_unassigned
-              else "—" }}
-            </span>
+    <div class="col-lg-6">
+      <section class="panel h-100" aria-labelledby="rep-status">
+        <h2 class="panel-title" id="rep-status">{{ _("By status") }}</h2>
+        {% if report.total %}
+        <div class="stack-bar" aria-hidden="true">
+          {% for status, count in report.status if count %}
+          <span class="seg status-{{ status }}" style="--w: {{ (count / report.total * 100) | round(2) }}%"></span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <ul class="legend">
+          {% for status, count in report.status %}
+          <li>
+            <span class="status status-{{ status }}">{{ status_label(status) | capitalize }}</span>
+            <span class="num">{{ count }}</span>
+            <span class="pct">{{ ((count / report.total * 100) | round | int) ~ " %" if report.total else "—" }}</span>
           </li>
+          {% endfor %}
         </ul>
+        {% if report.closed_unresolved %}
+        <p class="small text-muted mb-0 mt-2">
+          {{ _("{n} closed without a resolution.", n=report.closed_unresolved) }}
+        </p>
+        {% endif %}
+      </section>
+    </div>
+    <div class="col-lg-6">
+      <section class="panel h-100" aria-labelledby="rep-aging">
+        <h2 class="panel-title" id="rep-aging">{{ _("Pending tickets by age") }}</h2>
+        {% set age_max = [report.aging | map(attribute=1) | max, 1] | max %}
+        <ul class="dist">
+          {% for label, count in report.aging %}
+          <li>
+            <span>{{ label }}</span><span class="num">{{ count }}</span>
+            <span class="bar" aria-hidden="true"
+              ><span style="--w: {{ (count / age_max * 100) | round(1) }}%; --bar: {{ 'var(--st-open)' if loop.index > 3 else 'var(--accent)' }}"></span
+            ></span>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  {% if report.trend %}
+  <section class="panel mb-3" aria-labelledby="rep-trend">
+    <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2">
+      <h2 class="panel-title" id="rep-trend">
+        {%- if report.trend_unit == "month" %}{{ _("Created and resolved per month") }}
+        {%- elif report.trend_unit == "week" %}{{ _("Created and resolved per week") }}
+        {%- else %}{{ _("Created and resolved per day") }}{% endif -%}
+      </h2>
+      <ul class="trend-key" aria-hidden="true">
+        <li><span class="swatch created"></span>{{ _("Created") }}</li>
+        <li><span class="swatch resolved"></span>{{ _("Resolved") }}</li>
+      </ul>
+    </div>
+    <div class="trend" aria-hidden="true" style="--cols: {{ report.trend | length }}">
+      {% for bucket in report.trend %}
+      <div class="trend-col" title="{{ bucket.title }}: {{ bucket.created }} / {{ bucket.resolved }}">
+        <div class="trend-bars">
+          <span class="created" style="--h: {{ (bucket.created / report.trend_max * 100) | round(1) }}%"></span>
+          <span class="resolved" style="--h: {{ (bucket.resolved / report.trend_max * 100) | round(1) }}%"></span>
+        </div>
+        <span class="trend-label">{{ bucket.label if bucket.show_label else "" }}</span>
       </div>
+      {% endfor %}
+    </div>
+    <p class="small text-muted mb-0 mt-2">
+      {{ _("Resolved counts the tickets in this report by the date they were resolved.") }}
+    </p>
+    <table class="visually-hidden">
+      <caption>{{ _("Created and resolved") }}</caption>
+      <thead>
+        <tr><th scope="col">{{ _("Period") }}</th><th scope="col">{{ _("Created") }}</th><th scope="col">{{ _("Resolved") }}</th></tr>
+      </thead>
+      <tbody>
+        {% for bucket in report.trend %}
+        <tr><th scope="row">{{ bucket.title }}</th><td>{{ bucket.created }}</td><td>{{ bucket.resolved }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  <div class="row g-3 mb-3">
+    <div class="col-xl-6">
+      <section class="panel h-100" aria-labelledby="rep-priority">
+        <h2 class="panel-title" id="rep-priority">{{ _("By priority") }}</h2>
+        {{ breakdown(report.by_priority, _("Priority"), is_priority=True) }}
+      </section>
+    </div>
+    <div class="col-xl-6">
+      <section class="panel h-100" aria-labelledby="rep-category">
+        <h2 class="panel-title" id="rep-category">{{ _("By category") }}</h2>
+        {{ breakdown(report.by_category, _("Category")) }}
+      </section>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-xl-6">
+      <section class="panel h-100" aria-labelledby="rep-agent">
+        <h2 class="panel-title" id="rep-agent">{{ _("By agent") }}</h2>
+        {% if report.by_agent %}
+        {{ breakdown(report.by_agent, _("Agent")) }}
+        {% else %}
+        <p class="text-muted mb-0">{{ _("No ticket in this report has an assignee.") }}</p>
+        {% endif %}
+      </section>
+    </div>
+    <div class="col-xl-6">
+      <section class="panel h-100" aria-labelledby="rep-department">
+        <h2 class="panel-title" id="rep-department">{{ _("By department") }}</h2>
+        {% if report.by_department %}
+        {{ breakdown(report.by_department, _("Department")) }}
+        {% else %}
+        <p class="text-muted mb-0">—</p>
+        {% endif %}
+        {% if report.top_requesters %}
+        <h3 class="panel-subtitle">{{ _("Top requesters") }}</h3>
+        <ol class="top-list">
+          {% for name, count in report.top_requesters %}
+          <li><span>{{ name }}</span><span class="num">{{ count }}</span></li>
+          {% endfor %}
+        </ol>
+        {% endif %}
+      </section>
     </div>
   </div>
 
   {% if tickets %}
+  <h2 class="report-section-title">{{ _("Tickets") }} <span class="text-muted fw-normal">({{ tickets | length }})</span></h2>
   <div class="card shadow-sm">
     <table class="table table-hover align-middle mb-0 table-stack">
       <thead>
@@ -161,6 +285,7 @@ priority_badge, priority_label %} {% from "macros/forms.html" import field_label
           <th>{{ _("Department") }}</th>
           <th>{{ _("Assignee") }}</th>
           <th>{{ _("Created") }}</th>
+          <th>{{ _("Time to resolve") }}</th>
         </tr>
       </thead>
       <tbody>
@@ -188,7 +313,8 @@ priority_badge, priority_label %} {% from "macros/forms.html" import field_label
           <td data-label="{{ _("Assignee") }}">
             {{ (ticket.assignee.full_name or ticket.assignee.username) if ticket.assignee else "—" }}
           </td>
-          <td data-label="{{ _("Created") }}">{{ ticket.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+          <td data-label="{{ _("Created") }}" class="text-nowrap">{{ ticket.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+          <td data-label="{{ _("Time to resolve") }}" class="text-nowrap">{{ duration(resolution_time(ticket)) }}</td>
         </tr>
         {% endfor %}
       </tbody>

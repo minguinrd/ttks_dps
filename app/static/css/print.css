@@ -83,6 +83,20 @@
     font-size: 9pt;
   }
 
+  /* Charts are colour: keep the fills when printing. */
+  .stack-bar .seg,
+  .trend-bars span,
+  .dist .bar span,
+  .swatch,
+  .status::before {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .trend {
+    overflow: visible;
+  }
+
   .printable .table td,
   .printable .table th {
     padding: 0.25rem 0.4rem;
