@@ -1,14 +1,17 @@
-{% extends "base.html" %} {% from "macros/tickets.html" import ticket_list %} {% block title %}{{ _("My Tickets") }}{% endblock %} {% block content %}
+{% extends "base.html" %} {% from "macros/tickets.html" import ticket_list, pager %} {% block title %}{{ _("My Tickets") }}{% endblock %} {% block content %}
 <div class="page-head">
   <div>
     <h1>{{ _("My Tickets") }}</h1>
-    <p>{{ _("Tickets you opened or that are assigned to you.") }}</p>
+    <p>
+      {% if is_staff %}{{ _("Tickets you opened or that are assigned to you.") }}{% else %}{{ _("Open a ticket or check how yours are going.") }}{% endif %}
+    </p>
   </div>
   <a class="btn btn-primary" href="{{ url_for('tickets.new') }}"
     ><i class="ph ph-plus" aria-hidden="true"></i>{{ _("New ticket") }}</a
   >
 </div>
-{% if tickets %} {{ ticket_list(tickets, now) }} {% else %}
+
+{% if counts.all == 0 and not search %}
 <div class="panel empty-state">
   <i class="ph ph-tray" aria-hidden="true"></i>
   <span class="empty-title">{{ _("No tickets yet.") }}</span>
@@ -19,4 +22,94 @@
     >
   </div>
 </div>
+{% else %}
+
+{# Resolved tickets wait for the requester: confirm the fix or reopen. #}
+{% if awaiting and status != "resolved" %}
+<div class="callout" role="status">
+  <i class="ph ph-seal-check" aria-hidden="true"></i>
+  <p>
+    {% if awaiting == 1 %}
+    <strong>{{ _("One of your tickets has been resolved.") }}</strong>
+    {{ _("Check the fix and close it, or reopen it if the problem is still there.") }}
+    {% else %}
+    <strong>{{ _("{n} of your tickets have been resolved.", n=awaiting) }}</strong>
+    {{ _("Check the fix and close them, or reopen them if the problem is still there.") }}
+    {% endif %}
+  </p>
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('tickets.mine', status='resolved', scope='requested' if is_staff else None) }}"
+    >{{ _("Review") }}</a
+  >
+</div>
+{% endif %}
+
+{# Every link keeps the other choices; paging restarts when they change. #}
+{% set base = {} %}{% if scope != "all" %}{% set _void = base.update(scope=scope) %}{% endif %}{% if search %}{% set _void = base.update(q=search) %}{% endif %}
+{% set tabs = [("active", _("Pending")), ("resolved", _("Resolved")), ("closed", _("Closed")), ("all", _("All"))] %}
+<nav aria-label="{{ _("Status") }}">
+  <ul class="status-tabs">
+    {% for value, label in tabs %}
+    <li>
+      <a
+        href="{{ url_for('tickets.mine', **(base if value == 'active' else dict(base, status=value))) }}"
+        {% if status == value %}aria-current="page"{% endif %}
+        >{{ label }} <span class="count">{{ counts[value] }}</span></a
+      >
+    </li>
+    {% endfor %}
+  </ul>
+</nav>
+
+<form method="get" action="{{ url_for('tickets.mine') }}" class="filter-bar" role="search">
+  {% if status != "active" %}<input type="hidden" name="status" value="{{ status }}" />{% endif %}
+  {% if is_staff %}
+  <div class="filter filter-auto">
+    <span class="form-label d-block" id="scope-label">{{ _("Show") }}</span>
+    <div class="segmented" role="group" aria-labelledby="scope-label">
+      {% for value, label in [("all", _("Both")), ("requested", _("Opened by me")), ("assigned", _("Assigned to me"))] %}
+      {% set args = {} %}{% if value != "all" %}{% set _void = args.update(scope=value) %}{% endif %}{% if search %}{% set _void = args.update(q=search) %}{% endif %}{% if status != "active" %}{% set _void = args.update(status=status) %}{% endif %}
+      <a href="{{ url_for('tickets.mine', **args) }}" {% if scope == value %}aria-current="true"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </div>
+    {% if scope != "all" %}<input type="hidden" name="scope" value="{{ scope }}" />{% endif %}
+  </div>
+  {% endif %}
+  <div class="filter filter-grow">
+    <label class="form-label" for="mine-q">{{ _("Search") }}</label>
+    <input
+      class="form-control"
+      type="search"
+      id="mine-q"
+      name="q"
+      value="{{ search }}"
+      maxlength="100"
+      placeholder="{{ _("Text or #number") }}"
+    />
+  </div>
+  <div class="filter-actions">
+    <button type="submit" class="btn btn-primary">
+      <i class="ph ph-magnifying-glass" aria-hidden="true"></i>{{ _("Search") }}
+    </button>
+    {% if search %}
+    {% set reset = {} %}{% if scope != "all" %}{% set _void = reset.update(scope=scope) %}{% endif %}{% if status != "active" %}{% set _void = reset.update(status=status) %}{% endif %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('tickets.mine', **reset) }}">{{ _("Reset") }}</a>
+    {% endif %}
+  </div>
+</form>
+
+{% if tickets %}
+{{ ticket_list(tickets, now, fresh=fresh, stamp="updated") }}
+{{ pager(page, "tickets.mine", dict(base, status=status) if status != "active" else base) }}
+{% else %}
+<div class="panel empty-state">
+  {% if status == "active" and not search %}
+  <i class="ph ph-check-circle" aria-hidden="true"></i>
+  <span class="empty-title">{{ _("Nothing pending.") }}</span>
+  {{ _("All your tickets are resolved or closed.") }}
+  {% else %}
+  <i class="ph ph-funnel-simple-x" aria-hidden="true"></i>
+  <span class="empty-title">{{ _("No tickets match the current filters.") }}</span>
+  {% endif %}
+</div>
+{% endif %}
 {% endif %} {% endblock %}

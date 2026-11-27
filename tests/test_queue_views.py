@@ -106,3 +106,26 @@ def test_queue_pages(client, user_factory, login, ticket_factory):
 
     # Past the end: an empty page, not an error.
     assert client.get("/tickets/queue?page=99").status_code == 200
+
+
+def test_queue_marks_tickets_with_unread_updates(app, client, user_factory, login, ticket_factory):
+    from app.extensions import db
+    from app.models import Notification
+
+    agent = user_factory(username="qv-fresh", role="agent")
+    owner = user_factory(username="qv-fresh-owner")
+    quiet = ticket_factory(owner, subject="QUIET")
+    busy = ticket_factory(owner, subject="BUSY")
+    with app.app_context():
+        db.session.add(
+            Notification(user_id=agent.id, ticket_id=busy.id, message="x", url="/", is_read=False)
+        )
+        db.session.commit()
+    login(client, agent)
+
+    html = client.get("/tickets/queue").get_data(as_text=True)
+
+    assert html.count("New update") == 1
+    busy_row = html[html.index(">BUSY<") : html.index(f">#{busy.id}</a>")]
+    assert "New update" in busy_row
+    assert f">#{quiet.id}</a>" in html

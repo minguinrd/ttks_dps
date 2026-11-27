@@ -26,20 +26,83 @@ from app.tickets.forms import AssignForm, CommentForm, ResolveForm, TicketEditFo
 INVALID_TRANSITION_MESSAGE = _("This action is not allowed for the current ticket status.")
 
 
+_ACTIVE = (TicketStatus.open, TicketStatus.assigned)
+
+# "Mine" tabs: active work first; resolved tickets wait for the requester.
+MINE_TABS = ("active", "resolved", "closed", "all")
+MINE_SCOPES = ("all", "requested", "assigned")
+MINE_PER_PAGE = 25
+
+
 @tickets_bp.route("/mine")
 @login_required
 def mine():
-    tickets = db.session.scalars(
-        Ticket.list_query()
-        .where((Ticket.requester_id == current_user.id) | (Ticket.assignee_id == current_user.id))
-        .order_by(Ticket.created_at.desc())
-    ).all()
-    return render_template("tickets/mine.html", tickets=tickets, now=_naive_utc_now())
+    is_staff = current_user.role != Role.user
+    scope = request.args.get("scope", "all")
+    if scope not in MINE_SCOPES or not is_staff:
+        scope = "all"
+    status = request.args.get("status", "") or "active"
+    if status not in MINE_TABS:
+        status = "active"
+    search = request.args.get("q", "").strip()[:100]
+
+    if scope == "requested":
+        filters = [Ticket.requester_id == current_user.id]
+    elif scope == "assigned":
+        filters = [Ticket.assignee_id == current_user.id]
+    else:
+        filters = [
+            (Ticket.requester_id == current_user.id) | (Ticket.assignee_id == current_user.id)
+        ]
+    if search:
+        number = search.removeprefix("#")
+        text = Ticket.subject.ilike(like_pattern(search), escape=LIKE_ESCAPE)
+        filters.append((Ticket.id == int(number)) | text if number.isdigit() else text)
+
+    counts = {value.value: 0 for value in TicketStatus}
+    for value, count in db.session.execute(
+        db.select(Ticket.status, db.func.count(Ticket.id)).where(*filters).group_by(Ticket.status)
+    ):
+        counts[value] = count
+    counts["active"] = counts["open"] + counts["assigned"]
+    counts["all"] = sum(counts[value.value] for value in TicketStatus)
+
+    query = Ticket.list_query().where(*filters)
+    if status == "active":
+        query = query.where(Ticket.status.in_(_ACTIVE))
+    elif status != "all":
+        query = query.where(Ticket.status == status)
+    page = db.paginate(
+        query.order_by(Ticket.updated_at.desc(), Ticket.id.desc()),
+        page=request.args.get("page", 1, type=int),
+        per_page=MINE_PER_PAGE,
+        error_out=False,
+    )
+
+    fresh = _fresh_ticket_ids()
+    # Resolved tickets the viewer requested are waiting for their confirmation.
+    awaiting = db.session.scalar(
+        db.select(db.func.count(Ticket.id)).where(
+            Ticket.requester_id == current_user.id, Ticket.status == TicketStatus.resolved
+        )
+    )
+    return render_template(
+        "tickets/mine.html",
+        tickets=page.items,
+        page=page,
+        status=status,
+        scope=scope,
+        search=search,
+        counts=counts,
+        fresh=fresh,
+        awaiting=awaiting,
+        is_staff=is_staff,
+        now=_naive_utc_now(),
+    )
 
 
 # Queue tabs: "active" (the default) is the work still to do.
 QUEUE_TABS = ("active", "open", "assigned", "resolved", "closed", "all")
-_ACTIVE = (TicketStatus.open, TicketStatus.assigned)
 QUEUE_PER_PAGE = 50
 # Most pressing first; unknown values sort last.
 _PRIORITY_RANK = db.case(
@@ -134,6 +197,20 @@ def queue():
         categories=db.session.scalars(db.select(Category).order_by(Category.name)).all(),
         users=db.session.scalars(db.select(User).order_by(User.username)).all(),
         staff=staff,
+        fresh=_fresh_ticket_ids(),
+    )
+
+
+def _fresh_ticket_ids() -> set[int]:
+    """Tickets with an unread notification for the viewer ("New update" mark)."""
+    return set(
+        db.session.scalars(
+            db.select(Notification.ticket_id).where(
+                Notification.user_id == current_user.id,
+                Notification.is_read.is_(False),
+                Notification.ticket_id.is_not(None),
+            )
+        )
     )
 
 

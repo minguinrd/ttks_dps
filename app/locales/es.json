@@ -356,5 +356,16 @@
   "More from {name}": "Más tickets de {name}",
   "Only agents and admins will see this note.": "Solo los agentes y administradores verán esta nota.",
   "Reopen this ticket? It goes back to the queue.": "¿Reabrir este ticket? Volverá a la cola.",
-  "See all in the queue": "Ver todos en la cola"
+  "See all in the queue": "Ver todos en la cola",
+  "All your tickets are resolved or closed.": "Todos tus tickets están resueltos o cerrados.",
+  "Assigned to me": "Asignados a mí",
+  "Both": "Ambos",
+  "Check the fix and close them, or reopen them if the problem is still there.": "Comprueba la solución y ciérralos, o reábrelos si el problema sigue.",
+  "New update": "Novedad",
+  "Nothing pending.": "Nada pendiente.",
+  "Opened by me": "Abiertos por mí",
+  "Show": "Mostrar",
+  "{n} of your tickets have been resolved.": "Se han resuelto {n} de tus tickets.",
+  "One of your tickets has been resolved.": "Se ha resuelto uno de tus tickets.",
+  "Check the fix and close it, or reopen it if the problem is still there.": "Comprueba la solución y ciérralo, o reábrelo si el problema sigue."
 }

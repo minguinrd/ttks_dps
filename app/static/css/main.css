@@ -1066,6 +1066,10 @@ textarea.form-control {
   flex: 3 1 16rem;
 }
 
+.filter-bar .filter-auto {
+  flex: 0 0 auto;
+}
+
 /* Seven controls share one row on desktop. */
 .queue-filters .filter {
   flex-basis: 8rem;
@@ -1082,6 +1086,87 @@ textarea.form-control {
 /* With JS, selects submit on change, so the Apply button is redundant. */
 .js .filter-bar [data-autosubmit-hide] {
   display: none;
+}
+
+/* "New update": unread activity on a ticket the viewer follows. */
+.ticket-meta .fresh-tag,
+.fresh-tag {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  vertical-align: 0.1em;
+  color: var(--ui-accent-ink);
+  background: var(--ui-accent-wash);
+}
+
+.ticket-row.is-fresh .ticket-subject {
+  font-weight: 800;
+}
+
+/* Inline callout above a list (resolved tickets awaiting the requester). */
+.callout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid color-mix(in srgb, var(--st-resolved) 35%, var(--ui-line));
+  border-radius: var(--ui-radius-lg);
+  background: color-mix(in srgb, var(--st-resolved) 8%, var(--ui-surface));
+}
+
+.callout > .ph {
+  font-size: 1.5rem;
+  color: var(--st-resolved);
+}
+
+.callout p {
+  margin: 0;
+}
+
+@media screen and (max-width: 575.98px) {
+  .callout {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .callout .btn {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+/* Segmented control made of links (one choice at a time). */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  padding: 2px;
+  gap: 2px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.segmented a {
+  padding: 0.35rem 0.75rem;
+  border-radius: calc(var(--ui-radius) - 2px);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ui-text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.segmented a:hover {
+  color: var(--ui-text);
+}
+
+.segmented a[aria-current="true"] {
+  background: var(--ui-accent-wash);
+  color: var(--ui-accent-ink);
 }
 
 .queue-summary {

@@ -4,7 +4,7 @@
    status rail (data-status → main.css) and the whole row links to the
    ticket; the claim button sits above that link. `queue` adds the
    requester/department meta, the age column and the claim slot. #}
-{% macro ticket_list(tickets, now, queue=False) -%}
+{% macro ticket_list(tickets, now, queue=False, fresh=(), stamp="created") -%}
 <div class="ticket-list{% if not queue %} ticket-list-compact{% endif %}">
   <div class="ticket-list-head" aria-hidden="true">
     <span>{{ _("Subject") }}</span>
@@ -15,18 +15,19 @@
     <span class="end">{{ _("Age") }}</span>
     <span></span>
     {% else %}
-    <span class="end">{{ _("Created") }}</span>
+    <span class="end">{{ _("Updated") if stamp == "updated" else _("Created") }}</span>
     {% endif %}
   </div>
   <ul class="list-unstyled m-0">
     {% for ticket in tickets %}
     {% set hours = ((now - ticket.created_at).total_seconds() // 3600) | int if ticket.created_at else 0 %}
-    <li class="ticket-row" data-status="{{ ticket.status }}">
+    <li class="ticket-row{% if ticket.id in fresh %} is-fresh{% endif %}" data-status="{{ ticket.status }}">
       <div class="ticket-main">
         <a class="ticket-subject" href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}"
           >{{ ticket.subject }}</a
         >
         <div class="ticket-meta">
+          {% if ticket.id in fresh %}<span class="fresh-tag">{{ _("New update") }}</span>{% endif %}
           {# Same target as the subject link: kept out of the tab order. #}
           <a
             class="ticket-id"
@@ -70,7 +71,7 @@
           {{ ((hours // 24) ~ "d") if hours >= 24 else (hours ~ "h") }}</span
         >
         {% else %}
-        <span class="ticket-age">{{ when(ticket.created_at) }}</span>
+        <span class="ticket-age">{{ when(ticket.updated_at if stamp == "updated" else ticket.created_at) }}</span>
         {% endif %}
       </div>
       {% if queue %}
@@ -88,4 +89,24 @@
     {% endfor %}
   </ul>
 </div>
+{%- endmacro %}
+
+
+{# Previous / "Page n of m" / Next; `args` are the query params to keep. #}
+{% macro pager(page, endpoint, args) -%}
+{% if page.pages > 1 %}
+<nav class="pager" aria-label="{{ _("Pages") }}">
+  {% if page.has_prev %}
+  <a class="btn btn-outline-secondary" href="{{ url_for(endpoint, page=page.prev_num, **args) }}" rel="prev"
+    ><i class="ph ph-caret-left" aria-hidden="true"></i>{{ _("Previous") }}</a
+  >
+  {% else %}<span></span>{% endif %}
+  <span class="pager-pos">{{ _("Page {n} of {total}", n=page.page, total=page.pages) }}</span>
+  {% if page.has_next %}
+  <a class="btn btn-outline-secondary" href="{{ url_for(endpoint, page=page.next_num, **args) }}" rel="next"
+    >{{ _("Next") }}<i class="ph ph-caret-right" aria-hidden="true"></i></a
+  >
+  {% else %}<span></span>{% endif %}
+</nav>
+{% endif %}
 {%- endmacro %}

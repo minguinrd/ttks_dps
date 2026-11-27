@@ -1,4 +1,4 @@
-{% extends "base.html" %} {% from "macros/badges.html" import priority_label %} {% from "macros/tickets.html" import ticket_list %} {% block title %}{{ _("Queue") }}{% endblock %} {% block content %}
+{% extends "base.html" %} {% from "macros/badges.html" import priority_label %} {% from "macros/tickets.html" import ticket_list, pager %} {% block title %}{{ _("Queue") }}{% endblock %} {% block content %}
 <div class="page-head">
   <h1>{{ _("Ticket Queue") }}</h1>
   <a class="btn btn-primary" href="{{ url_for('tickets.new') }}"
@@ -140,23 +140,9 @@
 <p class="queue-summary" aria-live="polite">
   {{ _("Showing {first}–{last} of {total}", first=(page.page - 1) * page.per_page + 1, last=(page.page - 1) * page.per_page + tickets | length, total=page.total) }}
 </p>
-{{ ticket_list(tickets, now, queue=True) }}
-{% if page.pages > 1 %}
+{{ ticket_list(tickets, now, queue=True, fresh=fresh) }}
 {% set page_args = dict(other_args, **({"status": status} if status != "active" else {})) %}
-<nav class="pager" aria-label="{{ _("Pages") }}">
-  {% if page.has_prev %}
-  <a class="btn btn-outline-secondary" href="{{ url_for('tickets.queue', page=page.prev_num, **page_args) }}" rel="prev"
-    ><i class="ph ph-caret-left" aria-hidden="true"></i>{{ _("Previous") }}</a
-  >
-  {% else %}<span></span>{% endif %}
-  <span class="pager-pos">{{ _("Page {n} of {total}", n=page.page, total=page.pages) }}</span>
-  {% if page.has_next %}
-  <a class="btn btn-outline-secondary" href="{{ url_for('tickets.queue', page=page.next_num, **page_args) }}" rel="next"
-    >{{ _("Next") }}<i class="ph ph-caret-right" aria-hidden="true"></i></a
-  >
-  {% else %}<span></span>{% endif %}
-</nav>
-{% endif %}
+{{ pager(page, "tickets.queue", page_args) }}
 {% else %}
 <div class="panel empty-state">
   {% if status == "active" and not other_args %}
