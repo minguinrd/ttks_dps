@@ -121,11 +121,6 @@
   --ui-shadow-pop: 0 16px 40px -12px rgba(0, 0, 0, 0.7);
 }
 
-/* Same-origin page changes cross-fade instead of flashing white. */
-@view-transition {
-  navigation: auto;
-}
-
 /* --------------------------------------------------------------------------
    2. Base + type scale (1.25 ratio: 14 / 16 / 20 / 25 / 31)
    -------------------------------------------------------------------------- */
@@ -2302,10 +2297,6 @@ a.hint:hover {
    17. Reduced motion
    -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
-  @view-transition {
-    navigation: none;
-  }
-
   *,
   *::before,
   *::after {

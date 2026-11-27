@@ -29,6 +29,20 @@
         root.classList.add("js");
       })();
     </script>
+    {# Cross-page view transitions: same-origin page changes cross-fade
+       instead of flashing white. Declared inline, not in main.css, so every
+       incoming page has the opt-in when the browser checks it; otherwise
+       the browser aborts the transition ("ViewTransition opt-in disabled"). #}
+    <style>
+      @view-transition {
+        navigation: auto;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        @view-transition {
+          navigation: none;
+        }
+      }
+    </style>
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
     <meta name="theme-color" content="{{ branding.accent_color }}" />
     {# CDN assets are pinned to exact versions with SRI hashes: a tampered or
