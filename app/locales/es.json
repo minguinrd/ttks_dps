@@ -367,5 +367,6 @@
   "Show": "Mostrar",
   "{n} of your tickets have been resolved.": "Se han resuelto {n} de tus tickets.",
   "One of your tickets has been resolved.": "Se ha resuelto uno de tus tickets.",
-  "Check the fix and close it, or reopen it if the problem is still there.": "Comprueba la solución y ciérralo, o reábrelo si el problema sigue."
+  "Check the fix and close it, or reopen it if the problem is still there.": "Comprueba la solución y ciérralo, o reábrelo si el problema sigue.",
+  "Dark mode": "Modo oscuro"
 }

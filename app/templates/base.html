@@ -7,12 +7,22 @@
     <title>{% block title %}{{ _("Tickets") }}{% endblock %} · {{ branding.site_name }}</title>
     {# Theme follows the OS before first paint (no flash), and .js lets CSS
        hide no-JS fallbacks. Set on <html> at runtime only. #}
+    {# Theme: the reader's saved choice (theme toggle in the navbar), else the
+       system setting. Runs before first paint so the page never flashes. #}
     <script>
       (function () {
         var root = document.documentElement;
         var dark = window.matchMedia("(prefers-color-scheme: dark)");
+        function saved() {
+          try {
+            var value = localStorage.getItem("theme");
+            return value === "light" || value === "dark" ? value : null;
+          } catch (e) {
+            return null;
+          }
+        }
         function apply() {
-          root.setAttribute("data-bs-theme", dark.matches ? "dark" : "light");
+          root.setAttribute("data-bs-theme", saved() || (dark.matches ? "dark" : "light"));
         }
         apply();
         dark.addEventListener("change", apply);
@@ -154,6 +164,24 @@
             {% endif %}
           </ul>
           <ul class="navbar-nav align-items-lg-center gap-lg-1">
+            <li class="nav-item">
+              {# Hidden without JS: switching needs the script in app.js. #}
+              <button
+                type="button"
+                class="nav-link theme-toggle"
+                data-theme-toggle
+                aria-pressed="false"
+                aria-label="{{ _("Dark mode") }}"
+                title="{{ _("Dark mode") }}"
+                hidden
+              >
+                <span class="nav-icon">
+                  <i class="ph ph-moon icon-to-dark" aria-hidden="true"></i>
+                  <i class="ph ph-sun icon-to-light" aria-hidden="true"></i>
+                </span>
+                <span class="d-lg-none ms-2">{{ _("Dark mode") }}</span>
+              </button>
+            </li>
             <li class="nav-item">
               {% set unread = unread_count(current_user) %}
               <a

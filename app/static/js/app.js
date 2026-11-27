@@ -68,6 +68,28 @@ document.addEventListener("change", function (event) {
   if (form && form.hasAttribute("data-autosubmit")) form.requestSubmit();
 });
 
+// Theme toggle (navbar): flips light/dark and remembers the choice in this
+// browser; until it is used the page follows the system setting (see the
+// inline script in base.html).
+document.querySelectorAll("[data-theme-toggle]").forEach(function (button) {
+  var root = document.documentElement;
+  function sync() {
+    button.setAttribute("aria-pressed", String(root.getAttribute("data-bs-theme") === "dark"));
+  }
+  button.hidden = false;
+  sync();
+  new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["data-bs-theme"] });
+  button.addEventListener("click", function () {
+    var next = root.getAttribute("data-bs-theme") === "dark" ? "light" : "dark";
+    root.setAttribute("data-bs-theme", next);
+    try {
+      localStorage.setItem("theme", next);
+    } catch (e) {
+      /* private mode: the switch still applies to this page */
+    }
+  });
+});
+
 // Ctrl/Cmd + Enter sends a textarea's form (the comment composer).
 document.addEventListener("keydown", function (event) {
   var field = event.target;

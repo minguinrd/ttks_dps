@@ -1169,6 +1169,25 @@ textarea.form-control {
   color: var(--ui-accent-ink);
 }
 
+/* Theme toggle: a moon in light mode, a sun in dark mode. */
+.theme-toggle {
+  background: none;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  text-align: start;
+}
+
+.theme-toggle .icon-to-light,
+[data-bs-theme="dark"] .theme-toggle .icon-to-dark {
+  display: none;
+}
+
+[data-bs-theme="dark"] .theme-toggle .icon-to-light {
+  display: inline-block;
+}
+
 .queue-summary {
   font-size: 0.875rem;
   color: var(--ui-text-muted);
