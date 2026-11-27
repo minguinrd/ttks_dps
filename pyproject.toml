@@ -1,6 +1,6 @@
 [project]
 name = "ttks-dps"
-version = "0.3.0"
+version = "0.4.0"
 description = "Small Flask helpdesk: tickets, agent queue, in-app notifications."
 requires-python = ">=3.11"
 

@@ -330,5 +330,20 @@
   "{age} ago": "hace {age}",
   "{n} registrations awaiting approval": "{n} registros pendientes de aprobación",
   "{n} urgent tickets still pending": "{n} tickets urgentes sin resolver",
-  "and {n} more": "y {n} más"
+  "and {n} more": "y {n} más",
+  "Anyone": "Cualquiera",
+  "Every ticket has been resolved or closed.": "Todos los tickets están resueltos o cerrados.",
+  "Me": "Yo",
+  "Newest first": "Más recientes primero",
+  "Next": "Siguiente",
+  "Oldest first": "Más antiguos primero",
+  "Page {n} of {total}": "Página {n} de {total}",
+  "Pages": "Páginas",
+  "Previous": "Anterior",
+  "Priority, then oldest": "Más urgentes primero",
+  "Recently updated": "Actualizados recientemente",
+  "Showing {first}–{last} of {total}": "Mostrando {first}–{last} de {total}",
+  "Sort by": "Ordenar por",
+  "The queue is empty.": "La cola está vacía.",
+  "Text or #number": "Texto o n.º de ticket"
 }

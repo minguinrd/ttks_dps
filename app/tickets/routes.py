@@ -17,6 +17,7 @@ from app.models import (
 )
 from app.notifications import notify
 from app.permissions import role_required
+from app.search import LIKE_ESCAPE, like_pattern
 from app.tickets import tickets_bp
 from app.tickets.forms import AssignForm, CommentForm, ResolveForm, TicketEditForm, TicketForm
 
@@ -34,46 +35,103 @@ def mine():
     return render_template("tickets/mine.html", tickets=tickets, now=_naive_utc_now())
 
 
+# Queue tabs: "active" (the default) is the work still to do.
+QUEUE_TABS = ("active", "open", "assigned", "resolved", "closed", "all")
+_ACTIVE = (TicketStatus.open, TicketStatus.assigned)
+QUEUE_PER_PAGE = 50
+# Most pressing first; unknown values sort last.
+_PRIORITY_RANK = db.case(
+    {"urgent": 0, "high": 1, "normal": 2, "low": 3}, value=Ticket.priority, else_=4
+)
+QUEUE_SORTS = {
+    "priority": (_PRIORITY_RANK, Ticket.created_at.asc()),
+    "oldest": (Ticket.created_at.asc(),),
+    "newest": (Ticket.created_at.desc(),),
+    "updated": (Ticket.updated_at.desc(),),
+}
+
+
+def _queue_filters(args) -> list:
+    """Every queue filter except the status tab, as SQL conditions."""
+    filters = []
+    if category_id := args.get("category_id", type=int):
+        filters.append(Ticket.category_id == category_id)
+    if priority := args.get("priority", ""):
+        filters.append(Ticket.priority == priority)
+    if department_id := args.get("department_id", type=int):
+        filters.append(Ticket.department_id == department_id)
+    if requester_id := args.get("requester_id", type=int):
+        filters.append(Ticket.requester_id == requester_id)
+    assignee = args.get("assignee", "")
+    if assignee == "me":
+        filters.append(Ticket.assignee_id == current_user.id)
+    elif assignee == "none":
+        filters.append(Ticket.assignee_id.is_(None))
+    elif assignee.isdigit():
+        filters.append(Ticket.assignee_id == int(assignee))
+    search = args.get("q", "").strip()[:100]
+    if search:
+        # "#42" or "42" also finds ticket 42 by number.
+        number = search.removeprefix("#")
+        pattern = like_pattern(search)
+        text = Ticket.subject.ilike(pattern, escape=LIKE_ESCAPE) | Ticket.description.ilike(
+            pattern, escape=LIKE_ESCAPE
+        )
+        filters.append((Ticket.id == int(number)) | text if number.isdigit() else text)
+    return filters
+
+
 @tickets_bp.route("/queue")
 @login_required
 @role_required("agent", "admin")
 def queue():
     # Every filter except status narrows the list; the status tabs then show
     # how many of those tickets sit in each state.
-    filters = []
-    category_id = request.args.get("category_id", type=int)
-    if category_id:
-        filters.append(Ticket.category_id == category_id)
-    priority = request.args.get("priority", "")
-    if priority:
-        filters.append(Ticket.priority == priority)
-    department_id = request.args.get("department_id", type=int)
-    if department_id:
-        filters.append(Ticket.department_id == department_id)
-    requester_id = request.args.get("requester_id", type=int)
-    if requester_id:
-        filters.append(Ticket.requester_id == requester_id)
+    filters = _queue_filters(request.args)
+    status = request.args.get("status", "") or "active"
+    if status not in QUEUE_TABS:
+        status = "active"
+    sort = request.args.get("sort", "priority")
+    if sort not in QUEUE_SORTS:
+        sort = "priority"
 
     status_counts = {status.value: 0 for status in TicketStatus}
     for value, count in db.session.execute(
         db.select(Ticket.status, db.func.count(Ticket.id)).where(*filters).group_by(Ticket.status)
     ):
         status_counts[value] = count
+    status_counts["active"] = status_counts["open"] + status_counts["assigned"]
+    status_counts["all"] = sum(status_counts[value.value] for value in TicketStatus)
 
-    query = Ticket.list_query().where(*filters).order_by(Ticket.created_at.desc())
-    status = request.args.get("status", "")
-    if status:
+    query = Ticket.list_query().where(*filters)
+    if status == "active":
+        query = query.where(Ticket.status.in_(_ACTIVE))
+    elif status != "all":
         query = query.where(Ticket.status == status)
+    page = db.paginate(
+        query.order_by(*QUEUE_SORTS[sort], Ticket.id.desc()),
+        page=request.args.get("page", 1, type=int),
+        per_page=QUEUE_PER_PAGE,
+        error_out=False,
+    )
+    staff = db.session.scalars(
+        db.select(User)
+        .where(User.role.in_((Role.agent, Role.admin)), User.status == "active")
+        .order_by(User.username)
+    ).all()
     return render_template(
         "tickets/queue.html",
-        tickets=db.session.scalars(query).all(),
+        tickets=page.items,
+        page=page,
         status=status,
+        sort=sort,
+        search=request.args.get("q", "").strip()[:100],
         status_counts=status_counts,
-        total=sum(status_counts.values()),
         now=_naive_utc_now(),
         departments=db.session.scalars(db.select(Department).order_by(Department.name)).all(),
         categories=db.session.scalars(db.select(Category).order_by(Category.name)).all(),
         users=db.session.scalars(db.select(User).order_by(User.username)).all(),
+        staff=staff,
     )
 
 

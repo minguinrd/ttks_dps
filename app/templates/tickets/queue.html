@@ -6,23 +6,25 @@
   >
 </div>
 
-{# Status tabs keep every other active filter; counts honour those filters. #}
-{% set other_args = request.args.to_dict() %}{% set _ignored = other_args.pop("status", None) %}
+{# Status tabs keep every other active filter (but restart paging); counts
+   honour those filters. "Pending" (open + assigned) is the default view. #}
+{% set other_args = {} %}{% for key, value in request.args.items() if value and key not in ("status", "page") %}{% set _void = other_args.update({key: value}) %}{% endfor %}
 {% set tabs = [
-  ("", _("All"), total),
-  ("open", _("Open"), status_counts.open),
-  ("assigned", _("Assigned"), status_counts.assigned),
-  ("resolved", _("Resolved"), status_counts.resolved),
-  ("closed", _("Closed"), status_counts.closed),
+  ("active", _("Pending")),
+  ("open", _("Open")),
+  ("assigned", _("Assigned")),
+  ("resolved", _("Resolved")),
+  ("closed", _("Closed")),
+  ("all", _("All")),
 ] %}
 <nav aria-label="{{ _("Status") }}">
   <ul class="status-tabs">
-    {% for value, label, count in tabs %}
+    {% for value, label in tabs %}
     <li>
       <a
-        href="{{ url_for('tickets.queue', **(dict(other_args, status=value) if value else other_args)) }}"
+        href="{{ url_for('tickets.queue', **(other_args if value == 'active' else dict(other_args, status=value))) }}"
         {% if status == value %}aria-current="page"{% endif %}
-        >{{ label }} <span class="count">{{ count }}</span></a
+        >{{ label }} <span class="count">{{ status_counts[value] }}</span></a
       >
     </li>
     {% endfor %}
@@ -30,19 +32,32 @@
 </nav>
 
 {# Filters narrow the queue via query params; an empty value means "no filter".
-   With JS they apply on change (data-autosubmit), so Apply hides. #}
-<form method="get" action="{{ url_for('tickets.queue') }}" class="filter-bar" data-autosubmit>
-  {% if status %}<input type="hidden" name="status" value="{{ status }}" />{% endif %}
+   With JS the selects apply on change (data-autosubmit), so Apply hides;
+   the search box applies on Enter. #}
+<form method="get" action="{{ url_for('tickets.queue') }}" class="filter-bar queue-filters" data-autosubmit role="search">
+  {% if status != "active" %}<input type="hidden" name="status" value="{{ status }}" />{% endif %}
+  <div class="filter filter-grow">
+    <label class="form-label" for="filter-q">{{ _("Search") }}</label>
+    <input
+      class="form-control"
+      type="search"
+      id="filter-q"
+      name="q"
+      value="{{ search }}"
+      maxlength="100"
+      placeholder="{{ _("Text or #number") }}"
+    />
+  </div>
   <div class="filter">
-    <label class="form-label" for="filter-category">{{ _("Category") }}</label>
-    <select class="form-select" id="filter-category" name="category_id">
-      <option value="">{{ _("Any") }}</option>
-      {% for category in categories %}
-      <option
-        value="{{ category.id }}"
-        {% if (request.args.get("category_id") | int) == category.id %}selected{% endif %}
-      >
-        {{ category.name }}
+    <label class="form-label" for="filter-assignee">{{ _("Assignee") }}</label>
+    <select class="form-select" id="filter-assignee" name="assignee">
+      {% set chosen = request.args.get("assignee", "") %}
+      <option value="">{{ _("Anyone") }}</option>
+      <option value="me" {% if chosen == "me" %}selected{% endif %}>{{ _("Me") }}</option>
+      <option value="none" {% if chosen == "none" %}selected{% endif %}>{{ _("Unassigned") }}</option>
+      {% for member in staff if member.id != current_user.id %}
+      <option value="{{ member.id }}" {% if chosen == member.id | string %}selected{% endif %}>
+        {{ member.full_name or member.username }}
       </option>
       {% endfor %}
     </select>
@@ -53,7 +68,21 @@
       <option value="">{{ _("Any") }}</option>
       {% for value in ["urgent", "high", "normal", "low"] %}
       <option value="{{ value }}" {% if request.args.get("priority") == value %}selected{% endif %}>
-        {{ priority_label(value) }}
+        {{ priority_label(value) | capitalize }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter">
+    <label class="form-label" for="filter-category">{{ _("Category") }}</label>
+    <select class="form-select" id="filter-category" name="category_id">
+      <option value="">{{ _("Any") }}</option>
+      {% for category in categories %}
+      <option
+        value="{{ category.id }}"
+        {% if (request.args.get("category_id") | int) == category.id %}selected{% endif %}
+      >
+        {{ category.name }}
       </option>
       {% endfor %}
     </select>
@@ -86,24 +115,60 @@
       {% endfor %}
     </select>
   </div>
+  <div class="filter filter-sort">
+    <label class="form-label" for="filter-sort">{{ _("Sort by") }}</label>
+    <select class="form-select" id="filter-sort" name="sort" data-default="priority">
+      {% for value, label in [("priority", _("Priority, then oldest")), ("oldest", _("Oldest first")),
+      ("newest", _("Newest first")), ("updated", _("Recently updated"))] %}
+      <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
   <div class="filter-actions">
     <button type="submit" class="btn btn-primary" data-autosubmit-hide>
       <i class="ph ph-funnel" aria-hidden="true"></i>{{ _("Apply") }}
     </button>
-    {% if request.args %}
-    <a class="btn btn-outline-secondary" href="{{ url_for('tickets.queue') }}"
+    {% if other_args %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('tickets.queue', **({'status': status} if status != 'active' else {})) }}"
       ><i class="ph ph-x" aria-hidden="true"></i>{{ _("Reset") }}</a
     >
     {% endif %}
   </div>
 </form>
 
-{% if tickets %} {{ ticket_list(tickets, now, queue=True) }} {% else %}
+{% if tickets %}
+<p class="queue-summary" aria-live="polite">
+  {{ _("Showing {first}–{last} of {total}", first=(page.page - 1) * page.per_page + 1, last=(page.page - 1) * page.per_page + tickets | length, total=page.total) }}
+</p>
+{{ ticket_list(tickets, now, queue=True) }}
+{% if page.pages > 1 %}
+{% set page_args = dict(other_args, **({"status": status} if status != "active" else {})) %}
+<nav class="pager" aria-label="{{ _("Pages") }}">
+  {% if page.has_prev %}
+  <a class="btn btn-outline-secondary" href="{{ url_for('tickets.queue', page=page.prev_num, **page_args) }}" rel="prev"
+    ><i class="ph ph-caret-left" aria-hidden="true"></i>{{ _("Previous") }}</a
+  >
+  {% else %}<span></span>{% endif %}
+  <span class="pager-pos">{{ _("Page {n} of {total}", n=page.page, total=page.pages) }}</span>
+  {% if page.has_next %}
+  <a class="btn btn-outline-secondary" href="{{ url_for('tickets.queue', page=page.next_num, **page_args) }}" rel="next"
+    >{{ _("Next") }}<i class="ph ph-caret-right" aria-hidden="true"></i></a
+  >
+  {% else %}<span></span>{% endif %}
+</nav>
+{% endif %}
+{% else %}
 <div class="panel empty-state">
+  {% if status == "active" and not other_args %}
+  <i class="ph ph-check-circle" aria-hidden="true"></i>
+  <span class="empty-title">{{ _("The queue is empty.") }}</span>
+  {{ _("Every ticket has been resolved or closed.") }}
+  {% else %}
   <i class="ph ph-funnel-simple-x" aria-hidden="true"></i>
   <span class="empty-title">{{ _("No tickets match the current filters.") }}</span>
-  {% if request.args %}
-  <a href="{{ url_for('tickets.queue') }}">{{ _("Reset") }}</a>
+  {% if other_args %}
+  <a href="{{ url_for('tickets.queue', **({'status': status} if status != 'active' else {})) }}">{{ _("Reset") }}</a>
+  {% endif %}
   {% endif %}
 </div>
 {% endif %} {% endblock %}

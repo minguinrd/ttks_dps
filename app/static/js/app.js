@@ -68,6 +68,26 @@ document.addEventListener("change", function (event) {
   if (form && form.hasAttribute("data-autosubmit")) form.requestSubmit();
 });
 
+// GET filter forms leave empty and default-valued fields out of the URL, so
+// links stay short and "no filter" reads as no parameter at all. Listening
+// in the capture phase catches the formdata event of every form.
+document.addEventListener(
+  "formdata",
+  function (event) {
+    var form = event.target;
+    if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== "get") return;
+    Array.from(event.formData.keys()).forEach(function (name) {
+      var field = form.elements.namedItem(name);
+      var fallback = field && field.dataset ? field.dataset.default : undefined;
+      var value = event.formData.get(name);
+      if (value === "" || (fallback !== undefined && value === fallback)) {
+        event.formData.delete(name);
+      }
+    });
+  },
+  true,
+);
+
 // <time data-relative> → "hace 3 horas" in the page language; the absolute
 // timestamp moves to the tooltip.
 function relativeTimes() {

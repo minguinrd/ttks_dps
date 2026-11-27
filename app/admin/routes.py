@@ -25,6 +25,7 @@ from app.main.routes import branding_upload_error_response
 from app.models import Category, Department, Priority, Role, Setting, Ticket, TicketStatus, User
 from app.permissions import role_required
 from app.reports.stats import format_duration
+from app.search import LIKE_ESCAPE, like_pattern
 
 
 def compute_dashboard_stats() -> dict:
@@ -240,14 +241,12 @@ def users():
     if role:
         filters.append(User.role == role)
     if search:
-        # LIKE wildcards in the search text match literally.
-        escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        pattern = "%" + escaped + "%"
+        pattern = like_pattern(search)
         filters.append(
             db.or_(
-                User.username.ilike(pattern, escape="\\"),
-                User.full_name.ilike(pattern, escape="\\"),
-                User.email.ilike(pattern, escape="\\"),
+                User.username.ilike(pattern, escape=LIKE_ESCAPE),
+                User.full_name.ilike(pattern, escape=LIKE_ESCAPE),
+                User.email.ilike(pattern, escape=LIKE_ESCAPE),
             )
         )
     counts = dict.fromkeys(("pending", "active", "suspended"), 0)

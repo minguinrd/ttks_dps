@@ -1066,9 +1066,46 @@ textarea.form-control {
   flex: 3 1 16rem;
 }
 
+/* Seven controls share one row on desktop. */
+.queue-filters .filter {
+  flex-basis: 8rem;
+}
+
+.queue-filters .filter-grow {
+  flex: 2 1 10rem;
+}
+
+.queue-filters .filter-sort {
+  flex: 1 1 11.5rem;
+}
+
 /* With JS, selects submit on change, so the Apply button is redundant. */
 .js .filter-bar [data-autosubmit-hide] {
   display: none;
+}
+
+.queue-summary {
+  font-size: 0.875rem;
+  color: var(--ui-text-muted);
+  margin: 0 0 0.5rem;
+}
+
+.pager {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.pager > :last-child {
+  justify-self: end;
+}
+
+.pager-pos {
+  color: var(--ui-text-muted);
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
 }
 
 /* --------------------------------------------------------------------------
