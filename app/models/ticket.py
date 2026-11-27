@@ -130,9 +130,13 @@ class Ticket(db.Model):
         self.add_system_comment(actor, f"Resolved by {_display_name(actor)}.")
 
     def reopen(self, actor: User) -> None:
-        """``resolved → assigned`` or ``closed → assigned`` (admin-only from closed in routes)."""
+        """``resolved|closed → assigned`` (admin-only from closed in routes).
+
+        A ticket closed straight from the queue has no assignee; it goes back
+        to ``open`` instead, so it never sits as "assigned" to nobody.
+        """
         self._require_status(TicketStatus.resolved, TicketStatus.closed)
-        self.status = TicketStatus.assigned
+        self.status = TicketStatus.assigned if self.assignee_id else TicketStatus.open
         self.add_system_comment(actor, f"Reopened by {_display_name(actor)}.")
 
     def close(self, actor: User) -> None:

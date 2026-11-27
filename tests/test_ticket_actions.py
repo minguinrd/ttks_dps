@@ -201,7 +201,7 @@ def test_non_assignee_agent_cannot_resolve_403(app, client, user_factory, login,
 def test_reopen_closed_admin_only(app, client, user_factory, login, ticket_factory):
     owner = user_factory(username="reopen-closed-owner")
     agent = user_factory(username="reopen-closed-agent", role="agent")
-    ticket = ticket_factory(owner, status="closed")
+    ticket = ticket_factory(owner, status="closed", assignee=agent)
     login(client, agent)
 
     resp = client.post(f"/tickets/{ticket.id}/reopen")
@@ -223,6 +223,25 @@ def test_reopen_closed_admin_only(app, client, user_factory, login, ticket_facto
         assert row.status == "assigned"
         comments = db.session.scalars(db.select(Comment).filter_by(ticket_id=ticket.id)).all()
         assert [comment.body for comment in comments] == ["Reopened by Hal Admin."]
+
+
+def test_reopen_closed_unassigned_returns_to_queue(
+    app, client, user_factory, login, ticket_factory
+):
+    # Closed straight from the queue (no assignee): reopening must not leave
+    # an "assigned" ticket with nobody assigned.
+    owner = user_factory(username="reopen-unassigned-owner")
+    admin = user_factory(username="reopen-unassigned-admin", role="admin")
+    ticket = ticket_factory(owner, status="closed")
+    login(client, admin)
+
+    resp = client.post(f"/tickets/{ticket.id}/reopen")
+
+    assert resp.status_code == 302
+    with app.app_context():
+        row = db.session.get(Ticket, ticket.id)
+        assert row.status == "open"
+        assert row.assignee_id is None
 
 
 def test_resolve_unassigned_open_rejected(app, client, user_factory, login, ticket_factory):
