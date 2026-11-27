@@ -61,8 +61,10 @@ database and avatar uploads live in the `ttks_data` volume mounted at `/data`;
 
 While the app is running it snapshots the SQLite database into
 `DATA_DIR/backups/` (the `ttks_data` volume in Docker) once a day at
-`BACKUP_HOUR` (`HH:MM`, local time; default `03:00`), keeping the newest
-`BACKUP_KEEP` files (default `7`). Admins can trigger a snapshot and download
+`BACKUP_HOUR` (`HH:MM`, local time — UTC inside the Docker image; default
+`03:00`), keeping the newest
+`BACKUP_KEEP` files (default `7`). With several gunicorn workers only one
+process (the holder of `DATA_DIR/backups/.scheduler.lock`) takes the backup. Admins can trigger a snapshot and download
 backup files from the **Backups** admin page (`/admin/backup`).
 
 **Download those files off the machine — backups living in the same volume as
@@ -94,7 +96,14 @@ Pinned in `.env.example` and read by `app/config.py`:
 | `ADMIN_PASSWORD` | Initial admin password (forced change on first login) |
 | `BACKUP_HOUR` | Daily backup time as `HH:MM`, local (default `03:00`) |
 | `BACKUP_KEEP` | How many backup files to keep in `DATA_DIR/backups` (default `7`) |
+| `SESSION_COOKIE_SECURE` | `true` when served over HTTPS (session/remember cookies become Secure; default `false`) |
+| `TRUSTED_PROXIES` | Number of reverse proxies whose `X-Forwarded-*` headers are trusted (default `0`; use `1` behind nginx/Traefik so OAuth redirect URLs get `https`) |
+| `GUNICORN_WORKERS` | Gunicorn worker count in Docker (default `2`; see `gunicorn.conf.py` for the other `GUNICORN_*` knobs) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional Google sign-in — the "Sign in with Google" button appears only when both are set. Google sign-in creates an active account immediately (no admin approval); password registration still requires approval. |
+
+The app refuses to start without `SECRET_KEY` or with a malformed
+`BACKUP_HOUR`. `GET /healthz` is an unauthenticated health probe (used by the
+Docker `HEALTHCHECK`).
 
 `FLASK_APP=wsgi:app` is also set there for the flask CLI (the Docker image sets
 it itself).

@@ -21,7 +21,7 @@ Lint/format: ruff. Python 3.11+ syntax is fine (ruff `target-version = "py311"`)
 Blueprints in `app/{auth,main,tickets,admin}` (wired in `app/__init__.py`),
 models in `app/models/` (user, ticket, notification), Alembic migrations in
 `migrations/`, templates in `app/templates/`, deployment in `Dockerfile`,
-`docker/entrypoint.sh`, `docker-compose.yml`.
+`docker/entrypoint.sh`, `gunicorn.conf.py`, `docker-compose.yml`.
 
 ## Gotchas
 
@@ -31,11 +31,15 @@ models in `app/models/` (user, ticket, notification), Alembic migrations in
   `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `BACKUP_HOUR` / `BACKUP_KEEP` (daily
   SQLite backup schedule; defaults `03:00` / `7`), plus optional
   `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (both set gates the Google
-  login button and `/auth/google` routes). `flask seed-admin` errors without the
+  login button and `/auth/google` routes), and `SESSION_COOKIE_SECURE` /
+  `TRUSTED_PROXIES` for HTTPS behind a proxy. `create_app` raises without
+  `SECRET_KEY` (tests pass one explicitly). `flask seed-admin` errors without the
   `ADMIN_*` pair; `flask` CLI does not load `.env` unless python-dotenv is
   installed (export the vars or use `--app`).
-- Frontend assets come from CDNs (Bootstrap 5 + SweetAlert2 in
-  `app/templates/base.html`) — no local asset pipeline.
+- `requirements*.txt` pin exact versions; bump deliberately and rerun the suite.
+- Frontend assets come from CDNs (Bootstrap 5 + SweetAlert2 + Phosphor in
+  `app/templates/base.html`) — no local asset pipeline. Each is pinned to an
+  exact version with an SRI `integrity` hash; recompute it when bumping.
 - No email: notifications are in-app rows only (`app/notifications.py`).
 - The ticket status machine lives on `Ticket` (`app/models/ticket.py`) and
   raises `InvalidTransition` on illegal moves — catch it in routes, never
