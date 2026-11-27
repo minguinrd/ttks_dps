@@ -249,8 +249,16 @@
   "user": "usuario",
   "— none —": "— ninguno —",
   "New Ticket": "Nuevo ticket",
+  "Actions": "Acciones",
   "Administration": "Administración",
+  "Describe the problem; the support team is notified straight away.": "Describe el problema; el equipo de soporte recibe el aviso al momento.",
+  "Details": "Detalles",
   "Main": "Principal",
   "Skip to main content": "Saltar al contenido principal",
-  "Add a comment": "Añadir un comentario"
+  "Tickets you opened or that are assigned to you.": "Tickets que abriste o que tienes asignados.",
+  "Unassigned": "Sin asignar",
+  "Updated": "Actualizado",
+  "What happened, since when, and what you already tried.": "Qué ocurre, desde cuándo y qué has probado ya.",
+  "When something stops working, open a ticket and the support team will pick it up.": "Cuando algo deje de funcionar, abre un ticket y el equipo de soporte se encargará.",
+  "e.g. The printer on floor 2 does not print": "p. ej. La impresora de la planta 2 no imprime"
 }

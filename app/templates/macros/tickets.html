@@ -1,0 +1,91 @@
+{% from "macros/badges.html" import status_badge, priority_badge, when %}
+
+{# Ticket list shared by the queue and "My tickets". Each row carries a
+   status rail (data-status → main.css) and the whole row links to the
+   ticket; the claim button sits above that link. `queue` adds the
+   requester/department meta, the age column and the claim slot. #}
+{% macro ticket_list(tickets, now, queue=False) -%}
+<div class="ticket-list{% if not queue %} ticket-list-compact{% endif %}">
+  <div class="ticket-list-head" aria-hidden="true">
+    <span>{{ _("Subject") }}</span>
+    <span>{{ _("Status") }}</span>
+    <span>{{ _("Priority") }}</span>
+    <span>{{ _("Assignee") }}</span>
+    {% if queue %}
+    <span class="end">{{ _("Age") }}</span>
+    <span></span>
+    {% else %}
+    <span class="end">{{ _("Created") }}</span>
+    {% endif %}
+  </div>
+  <ul class="list-unstyled m-0">
+    {% for ticket in tickets %}
+    {% set hours = ((now - ticket.created_at).total_seconds() // 3600) | int if ticket.created_at else 0 %}
+    <li class="ticket-row" data-status="{{ ticket.status }}">
+      <div class="ticket-main">
+        <a class="ticket-subject" href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}"
+          >{{ ticket.subject }}</a
+        >
+        <div class="ticket-meta">
+          {# Same target as the subject link: kept out of the tab order. #}
+          <a
+            class="ticket-id"
+            href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}"
+            tabindex="-1"
+            aria-hidden="true"
+            >#{{ ticket.id }}</a>
+          {% if queue %}
+          <span
+            ><i class="ph ph-user" aria-hidden="true"></i
+            ><span class="visually-hidden">{{ _("Requester") }}:</span>
+            {{ ticket.requester.full_name or ticket.requester.username }}</span
+          >
+          {% if ticket.department %}
+          <span
+            ><i class="ph ph-buildings" aria-hidden="true"></i
+            ><span class="visually-hidden">{{ _("Department") }}:</span>
+            {{ ticket.department.name }}</span
+          >
+          {% endif %} {% endif %}
+          <span
+            ><i class="ph ph-tag" aria-hidden="true"></i
+            ><span class="visually-hidden">{{ _("Category") }}:</span>
+            {{ ticket.category.name }}</span
+          >
+        </div>
+      </div>
+      <div class="facts-inline">
+        <span class="ticket-cell">{{ status_badge(ticket.status) }}</span>
+        <span class="ticket-cell">{{ priority_badge(ticket.priority) }}</span>
+        <span class="ticket-cell{% if not ticket.assignee %} muted{% endif %}">
+          <span class="visually-hidden">{{ _("Assignee") }}:</span>
+          {{ (ticket.assignee.full_name or ticket.assignee.username) if ticket.assignee else _("Unassigned") }}
+        </span>
+        {% if queue %}
+        {# Waiting three days or more without being resolved is flagged. #}
+        <span
+          class="ticket-age{% if hours >= 72 and ticket.status in ('open', 'assigned') %} is-stale{% endif %}"
+          title="{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') if ticket.created_at else '' }}"
+          ><span class="visually-hidden">{{ _("Age") }}:</span>
+          {{ ((hours // 24) ~ "d") if hours >= 24 else (hours ~ "h") }}</span
+        >
+        {% else %}
+        <span class="ticket-age">{{ when(ticket.created_at) }}</span>
+        {% endif %}
+      </div>
+      {% if queue %}
+      <div class="claim-slot">
+        {% if ticket.status == "open" %}
+        <form method="post" action="{{ url_for('tickets.claim', ticket_id=ticket.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="btn btn-outline-primary btn-sm">
+            <i class="ph ph-hand-grabbing" aria-hidden="true"></i>{{ _("Claim") }}</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{%- endmacro %}

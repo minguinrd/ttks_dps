@@ -1,151 +1,109 @@
-{% extends "base.html" %} {% from "macros/badges.html" import status_badge, category_badge,
-priority_badge, status_label, priority_label %} {% block title %}{{ _("Queue") }}{% endblock %} {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h4 mb-0">{{ _("Ticket Queue") }}</h1>
+{% extends "base.html" %} {% from "macros/badges.html" import priority_label %} {% from "macros/tickets.html" import ticket_list %} {% block title %}{{ _("Queue") }}{% endblock %} {% block content %}
+<div class="page-head">
+  <h1>{{ _("Ticket Queue") }}</h1>
   <a class="btn btn-primary" href="{{ url_for('tickets.new') }}"
     ><i class="ph ph-plus" aria-hidden="true"></i>{{ _("New ticket") }}</a
   >
 </div>
 
-{# Filters narrow the queue via query params; an empty value means "no filter". #}
-<form method="get" action="{{ url_for('tickets.queue') }}" class="card shadow-sm mb-3">
-  <div class="card-body">
-    <div class="row g-2 align-items-end">
-      <div class="col-md">
-        <label class="form-label" for="filter-status">{{ _("Status") }}</label>
-        <select class="form-select" id="filter-status" name="status">
-          <option value="">{{ _("Any") }}</option>
-          {% for value in ["open", "assigned", "resolved", "closed"] %}
-          <option value="{{ value }}" {% if request.args.get("status") == value %}selected{% endif %}>
-            {{ status_label(value) }}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md">
-        <label class="form-label" for="filter-category">{{ _("Category") }}</label>
-        <select class="form-select" id="filter-category" name="category_id">
-          <option value="">{{ _("Any") }}</option>
-          {% for category in categories %}
-          <option
-            value="{{ category.id }}"
-            {% if (request.args.get("category_id") | int) == category.id %}selected{% endif %}
-          >
-            {{ category.name }}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md">
-        <label class="form-label" for="filter-priority">{{ _("Priority") }}</label>
-        <select class="form-select" id="filter-priority" name="priority">
-          <option value="">{{ _("Any") }}</option>
-          {% for value in ["low", "normal", "high", "urgent"] %}
-          <option
-            value="{{ value }}"
-            {% if request.args.get("priority") == value %}selected{% endif %}
-          >
-            {{ priority_label(value) }}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md">
-        <label class="form-label" for="filter-department">{{ _("Department") }}</label>
-        <select class="form-select" id="filter-department" name="department_id">
-          <option value="">{{ _("Any") }}</option>
-          {% for department in departments %}
-          <option
-            value="{{ department.id }}"
-            {% if (request.args.get("department_id") | int) == department.id %}selected{% endif %}
-          >
-            {{ department.name }}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md">
-        <label class="form-label" for="filter-requester">{{ _("Requester") }}</label>
-        <select class="form-select" id="filter-requester" name="requester_id">
-          <option value="">{{ _("Any") }}</option>
-          {% for requester in users %}
-          <option
-            value="{{ requester.id }}"
-            {% if (request.args.get("requester_id") | int) == requester.id %}selected{% endif %}
-          >
-            {{ requester.full_name or requester.username }}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-auto">
-        <button type="submit" class="btn btn-primary">
-          <i class="ph ph-funnel" aria-hidden="true"></i>{{ _("Apply") }}
-        </button>
-        <a class="btn btn-outline-secondary" href="{{ url_for('tickets.queue') }}"
-          ><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>{{ _("Reset") }}</a
-        >
-      </div>
-    </div>
+{# Status tabs keep every other active filter; counts honour those filters. #}
+{% set other_args = request.args.to_dict() %}{% set _ignored = other_args.pop("status", None) %}
+{% set tabs = [
+  ("", _("All"), total),
+  ("open", _("Open"), status_counts.open),
+  ("assigned", _("Assigned"), status_counts.assigned),
+  ("resolved", _("Resolved"), status_counts.resolved),
+  ("closed", _("Closed"), status_counts.closed),
+] %}
+<nav aria-label="{{ _("Status") }}">
+  <ul class="status-tabs">
+    {% for value, label, count in tabs %}
+    <li>
+      <a
+        href="{{ url_for('tickets.queue', **(dict(other_args, status=value) if value else other_args)) }}"
+        {% if status == value %}aria-current="page"{% endif %}
+        >{{ label }} <span class="count">{{ count }}</span></a
+      >
+    </li>
+    {% endfor %}
+  </ul>
+</nav>
+
+{# Filters narrow the queue via query params; an empty value means "no filter".
+   With JS they apply on change (data-autosubmit), so Apply hides. #}
+<form method="get" action="{{ url_for('tickets.queue') }}" class="filter-bar" data-autosubmit>
+  {% if status %}<input type="hidden" name="status" value="{{ status }}" />{% endif %}
+  <div class="filter">
+    <label class="form-label" for="filter-category">{{ _("Category") }}</label>
+    <select class="form-select" id="filter-category" name="category_id">
+      <option value="">{{ _("Any") }}</option>
+      {% for category in categories %}
+      <option
+        value="{{ category.id }}"
+        {% if (request.args.get("category_id") | int) == category.id %}selected{% endif %}
+      >
+        {{ category.name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter">
+    <label class="form-label" for="filter-priority">{{ _("Priority") }}</label>
+    <select class="form-select" id="filter-priority" name="priority">
+      <option value="">{{ _("Any") }}</option>
+      {% for value in ["urgent", "high", "normal", "low"] %}
+      <option value="{{ value }}" {% if request.args.get("priority") == value %}selected{% endif %}>
+        {{ priority_label(value) }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter">
+    <label class="form-label" for="filter-department">{{ _("Department") }}</label>
+    <select class="form-select" id="filter-department" name="department_id">
+      <option value="">{{ _("Any") }}</option>
+      {% for department in departments %}
+      <option
+        value="{{ department.id }}"
+        {% if (request.args.get("department_id") | int) == department.id %}selected{% endif %}
+      >
+        {{ department.name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter">
+    <label class="form-label" for="filter-requester">{{ _("Requester") }}</label>
+    <select class="form-select" id="filter-requester" name="requester_id">
+      <option value="">{{ _("Any") }}</option>
+      {% for requester in users %}
+      <option
+        value="{{ requester.id }}"
+        {% if (request.args.get("requester_id") | int) == requester.id %}selected{% endif %}
+      >
+        {{ requester.full_name or requester.username }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-actions">
+    <button type="submit" class="btn btn-primary" data-autosubmit-hide>
+      <i class="ph ph-funnel" aria-hidden="true"></i>{{ _("Apply") }}
+    </button>
+    {% if request.args %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('tickets.queue') }}"
+      ><i class="ph ph-x" aria-hidden="true"></i>{{ _("Reset") }}</a
+    >
+    {% endif %}
   </div>
 </form>
 
-{% if tickets %}
-<div class="card shadow-sm">
-  <table class="table table-hover align-middle mb-0 table-stack">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>{{ _("Subject") }}</th>
-        <th>{{ _("Status") }}</th>
-        <th>{{ _("Category") }}</th>
-        <th>{{ _("Priority") }}</th>
-        <th>{{ _("Requester") }}</th>
-        <th>{{ _("Department") }}</th>
-        <th>{{ _("Assignee") }}</th>
-        <th>{{ _("Age") }}</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for ticket in tickets %}
-      <tr>
-        <td data-label="#">
-          <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}">#{{ ticket.id }}</a>
-        </td>
-        <td data-label="{{ _("Subject") }}">
-          <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}" class="text-decoration-none"
-            >{{ ticket.subject }}</a
-          >
-        </td>
-        <td data-label="{{ _("Status") }}">{{ status_badge(ticket.status) }}</td>
-        <td data-label="{{ _("Category") }}">{{ category_badge(ticket.category.name) }}</td>
-        <td data-label="{{ _("Priority") }}">{{ priority_badge(ticket.priority) }}</td>
-        <td data-label="{{ _("Requester") }}">
-          {{ ticket.requester.full_name or ticket.requester.username }}
-        </td>
-        <td data-label="{{ _("Department") }}">{{ ticket.department.name if ticket.department else "—" }}</td>
-        <td data-label="{{ _("Assignee") }}">
-          {{ (ticket.assignee.full_name or ticket.assignee.username) if ticket.assignee else "—" }}
-        </td>
-        <td data-label="{{ _("Age") }}">
-          {% set hours = ((now - ticket.created_at).total_seconds() // 3600) | int %}
-          {{ ((hours // 24) ~ "d") if hours >= 24 else (hours ~ "h") }}
-        </td>
-        <td>
-          {% if ticket.status == "open" %}
-          <form method="post" action="{{ url_for('tickets.claim', ticket_id=ticket.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-primary btn-sm">
-              <i class="ph ph-hand-grabbing" aria-hidden="true"></i>{{ _("Claim") }}</button>
-          </form>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{% if tickets %} {{ ticket_list(tickets, now, queue=True) }} {% else %}
+<div class="panel empty-state">
+  <i class="ph ph-funnel-simple-x" aria-hidden="true"></i>
+  <span class="empty-title">{{ _("No tickets match the current filters.") }}</span>
+  {% if request.args %}
+  <a href="{{ url_for('tickets.queue') }}">{{ _("Reset") }}</a>
+  {% endif %}
 </div>
-{% else %}
-<div class="card card-body shadow-sm text-muted empty-state">{{ _("No tickets match the current filters.") }}</div>
 {% endif %} {% endblock %}

@@ -31,38 +31,55 @@ def mine():
         .where((Ticket.requester_id == current_user.id) | (Ticket.assignee_id == current_user.id))
         .order_by(Ticket.created_at.desc())
     ).all()
-    return render_template("tickets/mine.html", tickets=tickets)
+    return render_template("tickets/mine.html", tickets=tickets, now=_naive_utc_now())
 
 
 @tickets_bp.route("/queue")
 @login_required
 @role_required("agent", "admin")
 def queue():
-    query = Ticket.list_query().order_by(Ticket.created_at.desc())
+    # Every filter except status narrows the list; the status tabs then show
+    # how many of those tickets sit in each state.
+    filters = []
+    category_id = request.args.get("category_id", type=int)
+    if category_id:
+        filters.append(Ticket.category_id == category_id)
+    priority = request.args.get("priority", "")
+    if priority:
+        filters.append(Ticket.priority == priority)
+    department_id = request.args.get("department_id", type=int)
+    if department_id:
+        filters.append(Ticket.department_id == department_id)
+    requester_id = request.args.get("requester_id", type=int)
+    if requester_id:
+        filters.append(Ticket.requester_id == requester_id)
+
+    status_counts = {status.value: 0 for status in TicketStatus}
+    for value, count in db.session.execute(
+        db.select(Ticket.status, db.func.count(Ticket.id)).where(*filters).group_by(Ticket.status)
+    ):
+        status_counts[value] = count
+
+    query = Ticket.list_query().where(*filters).order_by(Ticket.created_at.desc())
     status = request.args.get("status", "")
     if status:
         query = query.where(Ticket.status == status)
-    category_id = request.args.get("category_id", type=int)
-    if category_id:
-        query = query.where(Ticket.category_id == category_id)
-    priority = request.args.get("priority", "")
-    if priority:
-        query = query.where(Ticket.priority == priority)
-    department_id = request.args.get("department_id", type=int)
-    if department_id:
-        query = query.where(Ticket.department_id == department_id)
-    requester_id = request.args.get("requester_id", type=int)
-    if requester_id:
-        query = query.where(Ticket.requester_id == requester_id)
     return render_template(
         "tickets/queue.html",
         tickets=db.session.scalars(query).all(),
-        # SQLite hands back naive UTC datetimes; keep ``now`` naive so the age column can subtract.
-        now=datetime.now(UTC).replace(tzinfo=None),
+        status=status,
+        status_counts=status_counts,
+        total=sum(status_counts.values()),
+        now=_naive_utc_now(),
         departments=db.session.scalars(db.select(Department).order_by(Department.name)).all(),
         categories=db.session.scalars(db.select(Category).order_by(Category.name)).all(),
         users=db.session.scalars(db.select(User).order_by(User.username)).all(),
     )
+
+
+def _naive_utc_now() -> datetime:
+    """``now`` in the shape SQLite hands back (naive UTC), so templates can subtract."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @tickets_bp.route("/new", methods=["GET", "POST"])

@@ -1,230 +1,244 @@
-{% extends "base.html" %} {% from "macros/badges.html" import status_badge, category_badge,
-priority_badge %} {% from "macros/forms.html" import field_label, field_errors %} {% block title %}{{ _("Ticket #{ticket_id}").format(ticket_id=ticket.id) }}{% endblock %} {% block content %}
-<div class="card shadow-sm mb-3">
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-start gap-2">
-      <h1 class="h4 mb-0">
-        <span class="text-muted">#{{ ticket.id }}</span> {{ ticket.subject }}
-      </h1>
-      <button class="btn btn-secondary no-print" onclick="window.print()">
-        <i class="ph ph-printer" aria-hidden="true"></i>{{ _("Print / Save as PDF") }}
-      </button>
-    </div>
-    <div class="mb-2">
-      {{ status_badge(ticket.status) }} {{ category_badge(ticket.category.name) }} {{
-      priority_badge(ticket.priority) }}
-    </div>
-    <dl class="row mb-0">
-      <dt class="col-sm-3">{{ _("Requester") }}</dt>
-      <dd class="col-sm-9">{{ ticket.requester.full_name or ticket.requester.username }}</dd>
-      <dt class="col-sm-3">{{ _("Assignee") }}</dt>
-      <dd class="col-sm-9">
-        {{ (ticket.assignee.full_name or ticket.assignee.username) if ticket.assignee else "—" }}
-      </dd>
-    </dl>
-    <p class="mb-0 mt-2 ticket-body">{{ ticket.description }}</p>
-  </div>
-</div>
-
-{# Resolution summary: rendered whenever a resolution note was recorded. #}
-{% if ticket.resolution_note %}
-<div class="card shadow-sm mb-3 border-success">
-  <div class="card-body">
-    <h2 class="h6">{{ _("Resolution") }}</h2>
-    <p class="mb-1 comment-body">{{ ticket.resolution_note }}</p>
-    {% if ticket.resolved_at %}
-    <div class="small text-muted">
-      {{ _("Resolved at {when}").format(when=ticket.resolved_at.strftime("%Y-%m-%d %H:%M")) }}
-    </div>
-    {% endif %}
-  </div>
-</div>
-{% endif %}
-
-{# Action buttons rendered from status + the viewer's role and stake in the ticket. #}
+{% extends "base.html" %} {% from "macros/badges.html" import status_badge, priority_badge, avatar, when %} {% from "macros/forms.html" import field_label, field_errors %} {% block title %}{{ _("Ticket #{ticket_id}").format(ticket_id=ticket.id) }}{% endblock %} {% block content %}
+{# Action availability: status + the viewer's role and stake in the ticket. #}
 {% set is_staff = current_user.role in ("agent", "admin") %}
 {% set is_requester = current_user.id == ticket.requester_id %}
 {% set is_assignee = current_user.id == ticket.assignee_id %}
 {% set can_claim = ticket.status == "open" and is_staff %}
-{% set can_release = ticket.status == "assigned" and (is_assignee or current_user.role == "admin")
-%}
+{% set can_release = ticket.status == "assigned" and (is_assignee or current_user.role == "admin") %}
 {% set can_assign = ticket.status in ("open", "assigned") and current_user.role == "admin" %}
 {% set can_resolve = ticket.status == "assigned" and (is_assignee or current_user.role == "admin") %}
-{% set can_reopen = (ticket.status == "resolved" and (is_requester or is_staff)) or (ticket.status ==
-"closed" and current_user.role == "admin") %}
-{% set can_close = ticket.status in ("open", "assigned", "resolved") and (is_requester or is_assignee
-or is_staff) %}
-{% if can_claim or can_release or can_assign or can_resolve or can_reopen or can_close %}
-<div class="card shadow-sm mb-3 no-print">
-  <div class="card-body">
-    <div class="d-flex flex-wrap gap-2 align-items-start">
-      {% if can_claim %}
-      <form
-        method="post"
-        action="{{ url_for('tickets.claim', ticket_id=ticket.id) }}"
-        class="no-print"
-      >
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-primary">
-          <i class="ph ph-hand-grabbing" aria-hidden="true"></i>{{ _("Claim") }}
-        </button>
-      </form>
-      {% endif %} {% if can_release %}
-      <form
-        method="post"
-        action="{{ url_for('tickets.release', ticket_id=ticket.id) }}"
-        class="no-print"
-      >
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-outline-secondary">
-          <i class="ph ph-hand-palm" aria-hidden="true"></i>{{ _("Release") }}
-        </button>
-      </form>
-      {% endif %} {% if can_assign %}
-      <form
-        method="post"
-        action="{{ url_for('tickets.assign', ticket_id=ticket.id) }}"
-        class="d-flex gap-2 no-print"
-      >
-        {{ assign_form.hidden_tag() }} {{ assign_form.agent_id(class_="form-select") }}
-        <button type="submit" class="btn btn-outline-primary">
-          <i class="ph ph-user-plus" aria-hidden="true"></i>{{ _("Assign") }}
-        </button>
-      </form>
-      {% endif %} {% if can_resolve %}
-      <form
-        method="post"
-        action="{{ url_for('tickets.resolve', ticket_id=ticket.id) }}"
-        class="w-100 no-print"
-        novalidate
-      >
-        {{ resolve_form.hidden_tag() }}
-        <div class="mb-2">
-          {{ field_label(resolve_form.resolution_note) }} {{
-          resolve_form.resolution_note(class_="form-control" + (" is-invalid" if
-          resolve_form.resolution_note.errors else ""), rows="2", placeholder=_("What fixed it?")) }}
-          {{ field_errors(resolve_form.resolution_note) }}
-        </div>
-        <button type="submit" class="btn btn-success">
-          <i class="ph ph-check-circle" aria-hidden="true"></i>{{ _("Resolve") }}
-        </button>
-      </form>
-      {% endif %} {% if can_reopen %}
-      <form
-        method="post"
-        action="{{ url_for('tickets.reopen', ticket_id=ticket.id) }}"
-        class="w-100 no-print"
-        data-confirm="{{ _("Reopen this ticket? It goes back to the assigned state.") }}"
-      >
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="mb-2">
-          <label class="form-label" for="reopen-comment">{{ _("Comment (optional)") }}</label>
-          <textarea class="form-control" id="reopen-comment" name="comment" rows="2"></textarea>
-        </div>
-        <button type="submit" class="btn btn-warning">
-          <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>{{ _("Reopen") }}
-        </button>
-      </form>
-      {% endif %} {% if can_close %}
-      <form
-        method="post"
-        action="{{ url_for('tickets.close', ticket_id=ticket.id) }}"
-        class="no-print"
-        data-confirm="{{ _("Close this ticket? It will accept no further comments or edits.") }}"
-      >
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-outline-danger">
-          <i class="ph ph-x" aria-hidden="true"></i>{{ _("Close") }}
-        </button>
-      </form>
-      {% endif %}
-    </div>
-  </div>
-</div>
-{% endif %}
+{% set can_reopen = (ticket.status == "resolved" and (is_requester or is_staff)) or (ticket.status == "closed" and current_user.role == "admin") %}
+{% set can_close = ticket.status in ("open", "assigned", "resolved") and (is_requester or is_assignee or is_staff) %}
+{% set has_actions = can_claim or can_release or can_assign or can_resolve or can_reopen or can_close %}
 
-<h2 class="h5">{{ _("Thread") }}</h2>
-{% for comment in comments %} {% if not comment.is_internal or current_user.role != "user" %}
-<div
-  class="card mb-2 {% if comment.is_internal %}border-warning bg-warning-subtle{% else %}shadow-sm{% endif %}"
->
-  <div class="card-body py-2">
-    <div class="small text-muted">
-      {{ comment.author.full_name or comment.author.username }} · {{
-      comment.created_at.strftime("%Y-%m-%d %H:%M") }} {% if comment.is_internal %}
-      <span class="badge text-bg-warning">{{ _("Internal note") }}</span>
-      {% endif %}
+<header class="ticket-head">
+  <div class="d-flex justify-content-between align-items-start gap-3">
+    <div>
+      <span class="ticket-number">#{{ ticket.id }}</span>
+      <h1>{{ ticket.subject }}</h1>
     </div>
-    <div class="mt-1 comment-body">{{ comment.body }}</div>
+    <button class="btn btn-ghost no-print" onclick="window.print()" title="{{ _("Print / Save as PDF") }}">
+      <i class="ph ph-printer" aria-hidden="true"></i><span class="d-none d-md-inline">{{ _("Print / Save as PDF") }}</span>
+    </button>
   </div>
-</div>
-{% endif %} {% else %}
-<p class="text-muted">{{ _("No comments yet.") }}</p>
-{% endfor %} {% if ticket.status != "closed" %}
-<div class="card shadow-sm mt-4 no-print">
-  <div class="card-body">
-    <h2 class="h6">{{ _("Add a comment") }}</h2>
-    <form
-      method="post"
-      action="{{ url_for('tickets.comment', ticket_id=ticket.id) }}"
-      class="no-print"
-      novalidate
-    >
-      {{ comment_form.hidden_tag() }}
-      <div class="mb-3">
-        {{ field_label(comment_form.body) }} {{
-        comment_form.body(class_="form-control" + (" is-invalid" if comment_form.body.errors else
-        ""), rows="3") }} {{ field_errors(comment_form.body) }}
-      </div>
-      {% if current_user.role != "user" %}
-      <div class="form-check mb-3">
-        {{ comment_form.is_internal(class_="form-check-input") }} {{
-        field_label(comment_form.is_internal, "form-check-label") }}
+  <div class="head-facts">
+    {{ status_badge(ticket.status) }} {{ priority_badge(ticket.priority) }}
+    <span><i class="ph ph-tag" aria-hidden="true"></i> {{ ticket.category.name }}</span>
+  </div>
+</header>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <section class="panel" aria-labelledby="desc-title">
+      <h2 class="panel-title" id="desc-title">{{ _("Description") }}</h2>
+      <div class="ticket-body">{{ ticket.description }}</div>
+    </section>
+
+    {# Resolution summary: rendered whenever a resolution note was recorded. #}
+    {% if ticket.resolution_note %}
+    <section class="panel resolution mt-3">
+      <h2 class="panel-title">
+        <i class="ph ph-check-circle" aria-hidden="true"></i>{{ _("Resolution") }}
+      </h2>
+      <div class="comment-body">{{ ticket.resolution_note }}</div>
+      {% if ticket.resolved_at %}
+      <div class="small text-muted mt-2">
+        {{ _("Resolved at {when}").format(when=ticket.resolved_at.strftime("%Y-%m-%d %H:%M")) }}
       </div>
       {% endif %}
-      <button type="submit" class="btn btn-primary">
-        <i class="ph ph-chat-circle" aria-hidden="true"></i>{{ _("Post comment") }}
-      </button>
-    </form>
+    </section>
+    {% endif %} {% if can_edit %}
+    <details class="disclosure mt-3 no-print">
+      <summary>
+        <i class="ph ph-pencil-simple" aria-hidden="true"></i>{{ _("Edit ticket") }}
+        <i class="ph ph-caret-down" aria-hidden="true"></i>
+      </summary>
+      <div class="disclosure-body">
+        <form
+          method="post"
+          action="{{ url_for('tickets.edit', ticket_id=ticket.id) }}"
+          class="no-print"
+          novalidate
+        >
+          {{ edit_form.hidden_tag() }}
+          <div class="mb-3">
+            {{ field_label(edit_form.subject) }} {{ edit_form.subject(class_="form-control" + (" is-invalid" if edit_form.subject.errors else "")) }} {{ field_errors(edit_form.subject) }}
+          </div>
+          <div class="mb-3">
+            {{ field_label(edit_form.description) }} {{ edit_form.description(class_="form-control" + (" is-invalid" if edit_form.description.errors else ""), rows="4") }} {{ field_errors(edit_form.description) }}
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              {{ field_label(edit_form.category_id) }} {{ edit_form.category_id(class_="form-select" + (" is-invalid" if edit_form.category_id.errors else "")) }} {{ field_errors(edit_form.category_id) }}
+            </div>
+            <div class="col-md-6 mb-3">
+              {{ field_label(edit_form.priority) }} {{ edit_form.priority(class_="form-select" + (" is-invalid" if edit_form.priority.errors else "")) }} {{ field_errors(edit_form.priority) }}
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="ph ph-floppy-disk" aria-hidden="true"></i>{{ _("Save changes") }}
+          </button>
+        </form>
+      </div>
+    </details>
+    {% endif %}
+
+    <section class="mt-4" aria-labelledby="thread-title">
+      <h2 class="h5 mb-3" id="thread-title">{{ _("Thread") }}</h2>
+      {% if comments %}
+      <ol class="thread">
+        {% for comment in comments %} {% if not comment.is_internal or current_user.role != "user" %}
+        <li class="thread-item{% if comment.is_internal %} is-internal{% endif %}">
+          {{ avatar(comment.author) }}
+          <div>
+            <div class="thread-meta">
+              <strong>{{ comment.author.full_name or comment.author.username }}</strong>
+              {{ when(comment.created_at) }}
+              {% if comment.is_internal %}
+              <span class="internal-tag"
+                ><i class="ph ph-lock-simple" aria-hidden="true"></i>{{ _("Internal note") }}</span
+              >
+              {% endif %}
+            </div>
+            <div class="thread-bubble comment-body">{{ comment.body }}</div>
+          </div>
+        </li>
+        {% endif %} {% endfor %}
+      </ol>
+      {% else %}
+      <p class="text-muted">{{ _("No comments yet.") }}</p>
+      {% endif %} {% if ticket.status != "closed" %}
+      <div class="panel composer no-print">
+        <form
+          method="post"
+          action="{{ url_for('tickets.comment', ticket_id=ticket.id) }}"
+          class="no-print"
+          novalidate
+        >
+          {{ comment_form.hidden_tag() }}
+          <div class="mb-3">
+            {{ field_label(comment_form.body) }} {{ comment_form.body(class_="form-control" + (" is-invalid" if comment_form.body.errors else ""), rows="3") }} {{ field_errors(comment_form.body) }}
+          </div>
+          <div class="composer-actions">
+            {% if current_user.role != "user" %}
+            <div class="form-check m-0">
+              {{ comment_form.is_internal(class_="form-check-input") }} {{ field_label(comment_form.is_internal, "form-check-label") }}
+            </div>
+            {% else %}<span></span>{% endif %}
+            <button type="submit" class="btn btn-primary">
+              <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>{{ _("Post comment") }}
+            </button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+    </section>
   </div>
-</div>
-{% endif %} {% if can_edit %}
-<div class="card shadow-sm mt-4 no-print">
-  <div class="card-body">
-    <h2 class="h6">{{ _("Edit ticket") }}</h2>
-    <form
-      method="post"
-      action="{{ url_for('tickets.edit', ticket_id=ticket.id) }}"
-      class="no-print"
-      novalidate
-    >
-      {{ edit_form.hidden_tag() }}
-      <div class="mb-3">
-        {{ field_label(edit_form.subject) }} {{
-        edit_form.subject(class_="form-control" + (" is-invalid" if edit_form.subject.errors else
-        "")) }} {{ field_errors(edit_form.subject) }}
-      </div>
-      <div class="mb-3">
-        {{ field_label(edit_form.description) }} {{
-        edit_form.description(class_="form-control" + (" is-invalid" if edit_form.description.errors
-        else ""), rows="3") }} {{ field_errors(edit_form.description) }}
-      </div>
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          {{ field_label(edit_form.category_id) }} {{
-          edit_form.category_id(class_="form-select" + (" is-invalid" if edit_form.category_id.errors else
-          "")) }} {{ field_errors(edit_form.category_id) }}
+
+  <aside class="col-lg-4">
+    <div class="detail-aside">
+      {% if has_actions %}
+      <section class="panel no-print" aria-labelledby="actions-title">
+        <h2 class="panel-title" id="actions-title">{{ _("Actions") }}</h2>
+        <div class="action-stack">
+          {% if can_claim %}
+          <form method="post" action="{{ url_for('tickets.claim', ticket_id=ticket.id) }}" class="no-print">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-primary">
+              <i class="ph ph-hand-grabbing" aria-hidden="true"></i>{{ _("Claim") }}
+            </button>
+          </form>
+          {% endif %} {% if can_resolve %}
+          <form method="post" action="{{ url_for('tickets.resolve', ticket_id=ticket.id) }}" class="no-print" novalidate>
+            {{ resolve_form.hidden_tag() }}
+            <div class="mb-2">
+              {{ field_label(resolve_form.resolution_note) }} {{ resolve_form.resolution_note(class_="form-control" + (" is-invalid" if resolve_form.resolution_note.errors else ""), rows="2", placeholder=_("What fixed it?")) }} {{ field_errors(resolve_form.resolution_note) }}
+            </div>
+            <button type="submit" class="btn btn-success">
+              <i class="ph ph-check-circle" aria-hidden="true"></i>{{ _("Resolve") }}
+            </button>
+          </form>
+          {% endif %} {% if can_assign %}
+          <form method="post" action="{{ url_for('tickets.assign', ticket_id=ticket.id) }}" class="no-print">
+            {{ assign_form.hidden_tag() }}
+            {{ field_label(assign_form.agent_id) }}
+            <div class="d-flex gap-2">
+              {{ assign_form.agent_id(class_="form-select") }}
+              <button type="submit" class="btn btn-outline-primary flex-none" style="width: auto">
+                <i class="ph ph-user-plus" aria-hidden="true"></i>{{ _("Assign") }}
+              </button>
+            </div>
+          </form>
+          {% endif %} {% if can_reopen %}
+          <form
+            method="post"
+            action="{{ url_for('tickets.reopen', ticket_id=ticket.id) }}"
+            class="no-print"
+            data-confirm="{{ _("Reopen this ticket? It goes back to the assigned state.") }}"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <div class="mb-2">
+              <label class="form-label" for="reopen-comment">{{ _("Comment (optional)") }}</label>
+              <textarea class="form-control" id="reopen-comment" name="comment" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-outline-primary">
+              <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>{{ _("Reopen") }}
+            </button>
+          </form>
+          {% endif %} {% if (can_release or can_close) and (can_claim or can_resolve or can_assign or can_reopen) %}
+          <hr />
+          {% endif %} {% if can_release %}
+          <form method="post" action="{{ url_for('tickets.release', ticket_id=ticket.id) }}" class="no-print">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-outline-secondary">
+              <i class="ph ph-hand-palm" aria-hidden="true"></i>{{ _("Release") }}
+            </button>
+          </form>
+          {% endif %} {% if can_close %}
+          <form
+            method="post"
+            action="{{ url_for('tickets.close', ticket_id=ticket.id) }}"
+            class="no-print"
+            data-confirm="{{ _("Close this ticket? It will accept no further comments or edits.") }}"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-outline-danger">
+              <i class="ph ph-x-circle" aria-hidden="true"></i>{{ _("Close") }}
+            </button>
+          </form>
+          {% endif %}
         </div>
-        <div class="col-md-6 mb-3">
-          {{ field_label(edit_form.priority) }} {{
-          edit_form.priority(class_="form-select" + (" is-invalid" if edit_form.priority.errors else
-          "")) }} {{ field_errors(edit_form.priority) }}
-        </div>
-      </div>
-      <button type="submit" class="btn btn-primary">
-        <i class="ph ph-floppy-disk" aria-hidden="true"></i>{{ _("Save changes") }}
-      </button>
-    </form>
-  </div>
+      </section>
+      {% endif %}
+
+      <section class="panel" aria-labelledby="details-title">
+        <h2 class="panel-title" id="details-title">{{ _("Details") }}</h2>
+        <dl class="facts">
+          <dt>{{ _("Requester") }}</dt>
+          <dd>
+            <span class="person"
+              >{{ avatar(ticket.requester, "avatar-sm") }} {{ ticket.requester.full_name or ticket.requester.username }}</span
+            >
+          </dd>
+          <dt>{{ _("Assignee") }}</dt>
+          <dd>
+            {% if ticket.assignee %}
+            <span class="person"
+              >{{ avatar(ticket.assignee, "avatar-sm") }} {{ ticket.assignee.full_name or ticket.assignee.username }}</span
+            >
+            {% else %}<span class="text-muted">{{ _("Unassigned") }}</span>{% endif %}
+          </dd>
+          <dt>{{ _("Department") }}</dt>
+          <dd>{{ ticket.department.name if ticket.department else "—" }}</dd>
+          <dt>{{ _("Category") }}</dt>
+          <dd>{{ ticket.category.name }}</dd>
+          <dt>{{ _("Created") }}</dt>
+          <dd>{{ when(ticket.created_at) }}</dd>
+          <dt>{{ _("Updated") }}</dt>
+          <dd>{{ when(ticket.updated_at) }}</dd>
+        </dl>
+      </section>
+    </div>
+  </aside>
 </div>
-{% endif %} {% endblock %}
+{% endblock %}
