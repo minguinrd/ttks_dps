@@ -70,14 +70,11 @@ def notification_read(notification_id):
 @main_bp.route("/notifications/read-all", methods=["POST"])
 @login_required
 def notifications_read_all():
-    rows = db.session.scalars(
-        db.select(Notification).where(
-            Notification.user_id == current_user.id,
-            Notification.is_read.is_(False),
-        )
-    ).all()
-    for row in rows:
-        row.is_read = True
+    db.session.execute(
+        db.update(Notification)
+        .where(Notification.user_id == current_user.id, Notification.is_read.is_(False))
+        .values(is_read=True)
+    )
     db.session.commit()
     flash(_("All notifications marked as read."), "success")
     return redirect(url_for("main.notifications"))

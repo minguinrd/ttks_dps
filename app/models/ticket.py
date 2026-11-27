@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
 from enum import StrEnum
 
+from sqlalchemy.orm import selectinload
+
 from app.extensions import db
 from app.models.user import User
 
@@ -83,6 +85,19 @@ class Ticket(db.Model):
     department = db.relationship("Department")
     category = db.relationship("Category", back_populates="tickets")
     comments = db.relationship("Comment", back_populates="ticket", order_by="Comment.created_at")
+
+    @classmethod
+    def list_query(cls):
+        """``select(Ticket)`` with the relationships list pages render preloaded.
+
+        Avoids one lazy query per row for category/requester/assignee/department.
+        """
+        return db.select(cls).options(
+            selectinload(cls.category),
+            selectinload(cls.requester),
+            selectinload(cls.assignee),
+            selectinload(cls.department),
+        )
 
     def add_system_comment(self, actor: User, text: str) -> Comment:
         comment = Comment(ticket=self, author=actor, body=text)

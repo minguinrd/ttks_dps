@@ -56,7 +56,7 @@ def _summarize(tickets: list[Ticket]) -> dict:
 @role_required("agent", "admin")
 def index():
     form = ReportForm(formdata=request.args)
-    query = db.select(Ticket)
+    query = Ticket.list_query()
     date_from = _parse_date(request.args.get("date_from", ""))
     if date_from:
         query = query.where(Ticket.created_at >= datetime.combine(date_from, time.min))

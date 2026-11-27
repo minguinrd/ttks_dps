@@ -15,6 +15,7 @@ errors such as "Field must be between 8 and 128 characters long." translate
 without any per-form bookkeeping.
 """
 
+import functools
 import json
 import re
 from pathlib import Path
@@ -52,15 +53,15 @@ def get_locale() -> str:
         return "en"
 
 
-def _match_pattern(catalog: dict[str, str], message: str) -> str | None:
-    """Match ``message`` against the placeholder keys of ``catalog``.
+@functools.cache
+def _compiled_patterns(locale: str) -> tuple[tuple[re.Pattern[str], list[str], str], ...]:
+    """``(regex, placeholder names, translation)`` for each placeholder key of a catalog.
 
-    A key like ``Field must be between {min} and {max} characters long.``
-    becomes a regex whose placeholder slots capture the concrete values; the
-    Spanish template is re-formatted with them. Exact keys never reach this
-    path (``translate`` looks those up first).
+    Built once per locale (catalogs never change at runtime) so error rendering
+    does not recompile every pattern on every lookup miss.
     """
-    for key, template in catalog.items():
+    compiled = []
+    for key, template in _load_catalog(locale).items():
         names = _PLACEHOLDER.findall(key)
         if not names:
             continue
@@ -68,7 +69,20 @@ def _match_pattern(catalog: dict[str, str], message: str) -> str | None:
         pattern = "".join(
             re.escape(part) if index % 2 == 0 else "(.+?)" for index, part in enumerate(parts)
         )
-        match = re.fullmatch(pattern, message)
+        compiled.append((re.compile(pattern), names, template))
+    return tuple(compiled)
+
+
+def _match_pattern(locale: str, message: str) -> str | None:
+    """Match ``message`` against the placeholder keys of the ``locale`` catalog.
+
+    A key like ``Field must be between {min} and {max} characters long.``
+    becomes a regex whose placeholder slots capture the concrete values; the
+    Spanish template is re-formatted with them. Exact keys never reach this
+    path (``translate`` looks those up first).
+    """
+    for pattern, names, template in _compiled_patterns(locale):
+        match = pattern.fullmatch(message)
         if match:
             try:
                 return template.format(**dict(zip(names, match.groups(), strict=True)))
@@ -82,10 +96,10 @@ def translate(message: str, **params) -> str:
 
     ``params`` are interpolated after lookup (translate-then-format).
     """
-    catalog = _load_catalog(get_locale())
-    text = catalog.get(message)
+    locale = get_locale()
+    text = _load_catalog(locale).get(message)
     if text is None and not params:
-        text = _match_pattern(catalog, message)
+        text = _match_pattern(locale, message)
     if text is None:
         text = message
     return text.format(**params) if params else text

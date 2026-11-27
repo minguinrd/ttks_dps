@@ -27,7 +27,7 @@ INVALID_TRANSITION_MESSAGE = _("This action is not allowed for the current ticke
 @login_required
 def mine():
     tickets = db.session.scalars(
-        db.select(Ticket)
+        Ticket.list_query()
         .where((Ticket.requester_id == current_user.id) | (Ticket.assignee_id == current_user.id))
         .order_by(Ticket.created_at.desc())
     ).all()
@@ -38,7 +38,7 @@ def mine():
 @login_required
 @role_required("agent", "admin")
 def queue():
-    query = db.select(Ticket).order_by(Ticket.created_at.desc())
+    query = Ticket.list_query().order_by(Ticket.created_at.desc())
     status = request.args.get("status", "")
     if status:
         query = query.where(Ticket.status == status)
